@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:lbapi="urn:api3">
+  <SOAP-ENV:Body>
+    <lbapi:getPaymentsResponse>
+      <ret>
+        <pay>
+          <recordid>222111</recordid>
+          <parentrecordid>0</parentrecordid>
+          <agrmid>9999</agrmid>
+          <modperson>11</modperson>
+          <currid>1</currid>
+          <orderid>0</orderid>
+          <status>0</status>
+          <classid>0</classid>
+          <amount>-6000</amount>
+          <fromagrmid>0</fromagrmid>
+          <revno>0</revno>
+          <revisions>0</revisions>
+          <cashcode>1</cashcode>
+          <classname>Наличные</classname>
+          <paydate>2022-05-16 19:06:32</paydate>
+          <localdate>2022-05-16 19:06:32</localdate>
+          <canceldate/>
+          <perioddate/>
+          <receipt>22222222222222-2222</receipt>
+          <comment/>
+          <uuid/>
+          <fromagrmnumber/>
+          <paymentordernumber/>
+        </pay>
+        <bsodoc>33311122</bsodoc>
+        <timestamp>1652717192</timestamp>
+        <localtimestamp>1652717192</localtimestamp>
+        <amountcurr>-6000</amountcurr>
+        <ordernum>0</ordernum>
+        <uid>1917</uid>
+        <operid>1</operid>
+        <cardnumber>0</cardnumber>
+        <currsymb>руб</currsymb>
+        <uname>Иванов Иван Иванович</uname>
+        <agrm>Int-1111/11</agrm>
+        <mgr>Петров Петр Петрович</mgr>
+        <mgrdescr/>
+        <mgrlogin>manager</mgrlogin>
+        <opername>ООО "Корпоративный партнер"</opername>
+        <login>username</login>
+      </ret>
+      <ret>
+        <pay>
+          <recordid>222111</recordid>
+          <parentrecordid>0</parentrecordid>
+          <agrmid>9999</agrmid>
+          <modperson>11</modperson>
+          <currid>1</currid>
+          <orderid>0</orderid>
+          <status>0</status>
+          <classid>0</classid>
+          <amount>8000</amount>
+          <fromagrmid>0</fromagrmid>
+          <revno>0</revno>
+          <revisions>0</revisions>
+          <cashcode>1</cashcode>
+          <classname>Наличные</classname>
+          <paydate>2022-04-21 16:19:46</paydate>
+          <localdate>2022-04-21 16:19:46</localdate>
+          <canceldate/>
+          <perioddate/>
+          <receipt>22222222222222-2222</receipt>
+          <comment/>
+          <uuid/>
+          <fromagrmnumber/>
+          <paymentordernumber/>
+        </pay>
+        <bsodoc>0</bsodoc>
+        <timestamp>1650547186</timestamp>
+        <localtimestamp>1650547186</localtimestamp>
+        <amountcurr>8000</amountcurr>
+        <ordernum>0</ordernum>
+        <uid>1917</uid>
+        <operid>1</operid>
+        <cardnumber>0</cardnumber>
+        <currsymb>руб</currsymb>
+        <uname>Иванов Иван Иванович</uname>
+        <agrm>Int-1111/11</agrm>
+        <mgr>Петров Петр Петрович</mgr>
+        <mgrdescr/>
+        <mgrlogin>manager</mgrlogin>
+        <opername>ООО "Корпоративный партнер"</opername>
+        <login>username</login>
+      </ret>
+    </lbapi:getPaymentsResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

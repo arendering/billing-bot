@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:lbapi="urn:api3">
+  <SOAP-ENV:Body>
+    <lbapi:getAccountResponse>
+      <ret>
+        <application>0</application>
+        <account>
+          <uid>1917</uid>
+          <doctype>0</doctype>
+          <ipaccess>0</ipaccess>
+          <billdelivery>4</billdelivery>
+          <category>0</category>
+          <type>2</type>
+          <oksm>111</oksm>
+          <templ>0</templ>
+          <wrongactive>0</wrongactive>
+          <archive>0</archive>
+          <ownership>0</ownership>
+          <mobileisconfirmed>true</mobileisconfirmed>
+          <emailisconfirmed>true</emailisconfirmed>
+          <offerisaccepted>false</offerisaccepted>
+          <soleproprietor>false</soleproprietor>
+          <login>username</login>
+          <pass>secret</pass>
+          <descr/>
+          <name>Иванов Иван Иванович</name>
+          <phone/>
+          <fax/>
+          <email>foobar@mail.ru</email>
+          <mobile>+7999</mobile>
+          <bankname/>
+          <branchbankname/>
+          <treasuryname/>
+          <treasuryaccount/>
+          <bik/>
+          <settl/>
+          <corr/>
+          <kpp/>
+          <inn/>
+          <ogrn/>
+          <okpo/>
+          <okved/>
+          <gendiru/>
+          <glbuhgu/>
+          <kontperson/>
+          <actonwhat/>
+          <passsernum>11 11</passsernum>
+          <passno>111222</passno>
+          <passissuedate>2000-01-01</passissuedate>
+          <passissuedep>ОУФМС России</passissuedep>
+          <passissueplace>333-444</passissueplace>
+          <birthdate/>
+          <birthplace/>
+          <lastmoddate>2010-01-01 10:00:00</lastmoddate>
+          <wrongdate>0000-00-00 00:00:00</wrongdate>
+          <okato/>
+          <uuid/>
+          <abonentname>Иван</abonentname>
+          <abonentsurname>Иванов</abonentsurname>
+          <abonentpatronymic>Иванович</abonentpatronymic>
+          <swift/>
+          <kio/>
+          <bicbei/>
+          <iban/>
+          <bankcorr/>
+          <bankcorrcode/>
+          <bankcorraccount/>
+          <currency/>
+          <resident>0</resident>
+        </account>
+        <usergroups>
+          <usergroup>
+            <groupid>0</groupid>
+            <promiseallow>0</promiseallow>
+            <promiseallowmanager>0</promiseallowmanager>
+            <promiserent>0</promiserent>
+            <promisetill>0</promisetill>
+            <promiseondays>0</promiseondays>
+            <promiseblockdays>0</promiseblockdays>
+            <promisemax>0</promisemax>
+            <promisemin>0</promisemin>
+            <promiselimit>0</promiselimit>
+            <name>Все пользователи АСР</name>
+            <description>Системная группа Администратора по умолчанию</description>
+          </usergroup>
+          <usercnt>0</usercnt>
+          <fread>0</fread>
+          <fwrite>0</fwrite>
+        </usergroups>
+        <addresses>
+          <type>0</type>
+          <address>ул. Пушкина, д. 1</address>
+        </addresses>
+        <addresses>
+          <type>1</type>
+          <address>ул. Пушкина, д. 1</address>
+        </addresses>
+        <addresses>
+          <type>2</type>
+          <address>ул. Пушкина, д. 1</address>
+        </addresses>
+        <agreements>
+          <agrmid>9999</agrmid>
+          <uid>1917</uid>
+          <operid>1</operid>
+          <curid>1</curid>
+          <bnotify>0</bnotify>
+          <archive>0</archive>
+          <vgroups>4</vgroups>
+          <penaltymethod>0</penaltymethod>
+          <monthblockday>0</monthblockday>
+          <agrmtype>0</agrmtype>
+          <balance>5106.4583720000001</balance>
+          <balanceacc>12080</balanceacc>
+          <credit>0</credit>
+          <promisecredit>1500.50</promisecredit>
+          <installments>0</installments>
+          <balancestrictlimit>0</balancestrictlimit>
+          <blimit>0</blimit>
+          <balancestatus>1</balancestatus>
+          <isauto>0</isauto>
+          <friendagrmid>0</friendagrmid>
+          <parentagrmid>0</parentagrmid>
+          <paymentmethod>2</paymentmethod>
+          <blockdays>0</blockdays>
+          <blockmonths>0</blockmonths>
+          <orderpayday>0</orderpayday>
+          <blockorders>0</blockorders>
+          <blockamount>0</blockamount>
+          <priority>0</priority>
+          <ownerid>0</ownerid>
+          <isdefault>0</isdefault>
+          <friendnumber/>
+          <parentnumber/>
+          <balancelimitexceeded/>
+          <number>Int-1929/18</number>
+          <code/>
+          <date>2018-02-01</date>
+          <closedon/>
+          <datevalidto/>
+          <bcheck>0000-00-00</bcheck>
+          <symbol>руб</symbol>
+          <username>Иванов Иван Иванович</username>
+          <opername/>
+          <agreementidbopos>9999</agreementidbopos>
+          <descr/>
+          <balancetext/>
+          <initialbalance>0</initialbalance>
+          <errormessage/>
+        </agreements>
+        <addons>
+          <uid>1917</uid>
+          <type>0</type>
+          <idx>0</idx>
+          <name>lifestream_login</name>
+          <descr>Логин абонента Lifestream</descr>
+          <strvalue>username</strvalue>
+        </addons>
+      </ret>
+    </lbapi:getAccountResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

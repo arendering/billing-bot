@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:lbapi="urn:api3">
+  <SOAP-ENV:Body>
+    <lbapi:getVgroupsResponse>
+      <ret>
+        <templ>0</templ>
+        <vgid>11111</vgid>
+        <parentvgid>0</parentvgid>
+        <id>2</id>
+        <tarid>29</tarid>
+        <agrmid>9999</agrmid>
+        <blkreq>0</blkreq>
+        <blocked>0</blocked>
+        <canmodify>1</canmodify>
+        <uid>4950</uid>
+        <agenttype>13</agenttype>
+        <usercategory>0</usercategory>
+        <cuid>0</cuid>
+        <dirty>0</dirty>
+        <balance>486.09170499999999</balance>
+        <ppdebt>0</ppdebt>
+        <rent>0</rent>
+        <monthlyrent>0</monthlyrent>
+        <totalmonthlyrent>0</totalmonthlyrent>
+        <dlimit>0</dlimit>
+        <authmethod/>
+        <dclear/>
+        <login>username</login>
+        <descr/>
+        <agrmnum>Int-1111/11</agrmnum>
+        <code/>
+        <username>Иванов Иван Иванович</username>
+        <creationdate>2000-01-01 10:00:00</creationdate>
+        <accondate>2000-01-01 00:00:00</accondate>
+        <accoffdate>0000-00-00 00:00:00</accoffdate>
+        <blockdate>2000-01-01 23:53:39</blockdate>
+        <agentdescr>Услуги</agentdescr>
+        <tarifdescr>Услуги</tarifdescr>
+        <symbol>руб</symbol>
+        <parentvglogin/>
+        <changedtariffon/>
+        <pass>sausage</pass>
+        <address>
+          <type>0</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <address>
+          <type>1</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <address>
+          <type>2</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <renewalstate>-1</renewalstate>
+      </ret>
+      <ret>
+        <templ>0</templ>
+        <vgid>11111</vgid>
+        <parentvgid>0</parentvgid>
+        <id>6</id>
+        <tarid>168</tarid>
+        <agrmid>9999</agrmid>
+        <blkreq>0</blkreq>
+        <blocked>0</blocked>
+        <canmodify>1</canmodify>
+        <uid>1917</uid>
+        <agenttype>13</agenttype>
+        <usercategory>0</usercategory>
+        <cuid>0</cuid>
+        <dirty>0</dirty>
+        <balance>486.09170499999999</balance>
+        <ppdebt>0</ppdebt>
+        <rent>0</rent>
+        <monthlyrent>0</monthlyrent>
+        <totalmonthlyrent>0</totalmonthlyrent>
+        <dlimit>0</dlimit>
+        <authmethod/>
+        <dclear/>
+        <login>username</login>
+        <descr/>
+        <agrmnum>Int-1111/11</agrmnum>
+        <code/>
+        <username>Иванов Иван Иванович</username>
+        <creationdate>2000-01-01 10:00:00</creationdate>
+        <accondate>2000-01-01 10:00:00</accondate>
+        <accoffdate>0000-00-00 00:00:00</accoffdate>
+        <blockdate>2000-01-01 00:00:00</blockdate>
+        <agentdescr>Smotreshka</agentdescr>
+        <tarifdescr>ТВ - Смотрешка "Пакет Эксклюзив"</tarifdescr>
+        <symbol>руб</symbol>
+        <parentvglogin/>
+        <changedtariffon/>
+        <pass>sausage</pass>
+        <address>
+          <type>0</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <address>
+          <type>1</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <address>
+          <type>2</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <renewalstate>-1</renewalstate>
+      </ret>
+      <ret>
+        <templ>0</templ>
+        <vgid>11111</vgid>
+        <parentvgid>0</parentvgid>
+        <id>4</id>
+        <tarid>161</tarid>
+        <agrmid>9999</agrmid>
+        <blkreq>0</blkreq>
+        <blocked>0</blocked>
+        <canmodify>1</canmodify>
+        <uid>1917</uid>
+        <agenttype>6</agenttype>
+        <usercategory>0</usercategory>
+        <cuid>0</cuid>
+        <dirty>0</dirty>
+        <balance>486.09170499999999</balance>
+        <ppdebt>0</ppdebt>
+        <rent>0</rent>
+        <monthlyrent>0</monthlyrent>
+        <totalmonthlyrent>0</totalmonthlyrent>
+        <dlimit>0</dlimit>
+        <authmethod>-1</authmethod>
+        <dclear>2022-05-01</dclear>
+        <login>username</login>
+        <descr/>
+        <agrmnum>Int-1111/11</agrmnum>
+        <code/>
+        <username>Иванов Иван Иванович</username>
+        <creationdate>2000-01-01 10:00:00</creationdate>
+        <accondate>2000-01-01 10:00:00</accondate>
+        <accoffdate>0000-00-00 00:00:00</accoffdate>
+        <blockdate>22000-01-01 10:00:00</blockdate>
+        <agentdescr>Radius agent</agentdescr>
+        <tarifdescr>ФЛ - МКД - Начальный (MX)</tarifdescr>
+        <symbol>руб</symbol>
+        <parentvglogin/>
+        <changedtariffon/>
+        <pass>sausage</pass>
+        <address>
+          <type>0</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <renewalstate>-1</renewalstate>
+      </ret>
+      <ret>
+        <templ>0</templ>
+        <vgid>11111</vgid>
+        <parentvgid>16460</parentvgid>
+        <id>7</id>
+        <tarid>106</tarid>
+        <agrmid>9999</agrmid>
+        <blkreq>0</blkreq>
+        <blocked>0</blocked>
+        <canmodify>1</canmodify>
+        <uid>1917</uid>
+        <agenttype>13</agenttype>
+        <usercategory>0</usercategory>
+        <cuid>0</cuid>
+        <dirty>0</dirty>
+        <balance>486.09170499999999</balance>
+        <ppdebt>0</ppdebt>
+        <rent>0</rent>
+        <monthlyrent>0</monthlyrent>
+        <totalmonthlyrent>0</totalmonthlyrent>
+        <dlimit>0</dlimit>
+        <authmethod/>
+        <dclear/>
+        <login>username</login>
+        <descr/>
+        <agrmnum>Int-1111/11</agrmnum>
+        <code/>
+        <username>Иванов Иван Иванович</username>
+        <creationdate>2000-01-01 10:00:00</creationdate>
+        <accondate>2000-01-01 10:00:00</accondate>
+        <accoffdate>0000-00-00 00:00:00</accoffdate>
+        <blockdate>0000-00-00 00:00:00</blockdate>
+        <agentdescr>24tv</agentdescr>
+        <tarifdescr>ТВ - 24 часа ТВ  (Отключен)</tarifdescr>
+        <symbol>руб</symbol>
+        <parentvglogin>username</parentvglogin>
+        <changedtariffon/>
+        <pass>sausage</pass>
+        <address>
+          <type>0</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <address>
+          <type>1</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <address>
+          <type>2</type>
+          <address>ул. Пушкина, д. 1</address>
+        </address>
+        <renewalstate>-1</renewalstate>
+      </ret>
+    </lbapi:getVgroupsResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
