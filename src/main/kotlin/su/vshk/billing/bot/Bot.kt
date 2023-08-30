@@ -168,13 +168,8 @@ class Bot(
                         )
                     )
                 } catch (ex: Throwable) {
-                    when {
-                        ex.botWasBlockedByUser() -> Message()
-                        else -> {
-                            log.errorTraceId(context = contextView, msg = "send message error", ex = ex)
-                            throw ex
-                        }
-                    }
+                    log.errorTraceId(context = contextView, msg = "send message error", ex = ex)
+                    throw ex
                 }
             }
         }

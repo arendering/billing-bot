@@ -4,9 +4,11 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
+import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.Bot
 import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.dao.service.UserDaoService
+import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.service.PaymentNotificationService
 import su.vshk.billing.bot.util.getLogger
 import su.vshk.billing.bot.util.putTraceId
@@ -18,6 +20,7 @@ class PaymentScheduler(
     private val properties: BotProperties,
     private val userDaoService: UserDaoService,
     private val paymentNotificationService: PaymentNotificationService,
+    private val responseMessageService: ResponseMessageService
 ) {
 
     companion object {
@@ -62,7 +65,10 @@ class PaymentScheduler(
             .delayElements(Duration.ofSeconds(properties.paymentNotification.billingRequestDelaySeconds))
             .flatMap({ user ->
                 paymentNotificationService.createPaymentNotification(user = user, daysToLast = daysToLast)
-                    .flatMap { bot.sendResponse(chatId = user.telegramId, responseMessageItem = it) }
+                    .flatMap {
+                        bot.sendResponse(chatId = user.telegramId, responseMessageItem = it)
+                            .onErrorResume { responseMessageService.emptyMessage().toMono() }
+                    }
                     .map { Pair(user.telegramId, it) }
                     .putTraceId()
             }, 10 ) // значение concurrency выбрано произвольно
