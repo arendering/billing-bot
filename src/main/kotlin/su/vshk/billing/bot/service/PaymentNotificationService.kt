@@ -31,7 +31,7 @@ class PaymentNotificationService(
     fun createPaymentNotification(user: UserEntity, daysToLast: Int): Mono<ResponseMessageItem> =
         Mono
             .deferContextual { context ->
-                log.infoTraceId(context, "try to send notification, user ${user.telegramId}, daysToLast '$daysToLast'")
+                log.infoTraceId(context, "try to send notification, user '${user.telegramId}', daysToLast '$daysToLast'")
                 getBalanceAndRecommendedPayment(user)
                     .map { (balance, actualRecommendedPayment) ->
                         if (AmountUtils.isZero(actualRecommendedPayment)) {
