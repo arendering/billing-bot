@@ -10,6 +10,7 @@ import su.vshk.billing.bot.dialog.option.PaymentsOptions
 import su.vshk.billing.bot.dialog.option.PaymentsPeriod
 import su.vshk.billing.bot.dialog.step.PaymentsStep
 import su.vshk.billing.bot.message.ResponseMessageService
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 
 @Component
 class PaymentsStateTransformer(
@@ -19,41 +20,38 @@ class PaymentsStateTransformer(
     override fun getCommand(): Command =
         Command.PAYMENTS
 
-    override fun initializePreState(user: UserEntity): Mono<DialogState> =
+    override fun initializeState(request: RequestMessageItem, user: UserEntity): Mono<DialogState> =
         Mono.fromCallable {
             DialogState(
                 command = getCommand(),
                 options = PaymentsOptions(),
                 steps = listOf(PaymentsStep.PERIOD),
-                messages = DialogState.MessageContainer(
-                    message = responseMessageService.paymentsPeriod(),
-                    invalidOptionMessage = responseMessageService.paymentsWrongPeriod()
-                )
+                response = DialogState.Response.next(responseMessageService.paymentsPeriod())
             )
         }
 
-    override fun isValidOption(user: UserEntity, state: DialogState, option: String): Boolean =
-        option in PaymentsAvailableOptions.availablePeriods
-
-    override fun addOption(user: UserEntity, state: DialogState, option: String): DialogState =
-        when (val step = state.currentStep()) {
-            PaymentsStep.PERIOD -> addPeriodToOptions(state, option)
-            else -> throw IllegalStateException("unknown step: '$step'")
+    override fun processOption(request: RequestMessageItem, user: UserEntity, state: DialogState): Mono<DialogState> =
+        Mono.fromCallable {
+            when (val step = state.currentStep()) {
+                PaymentsStep.PERIOD -> addPeriodToOptions(state = state, option = request.input)
+                else -> throw IllegalStateException("unknown step: '$step'")
+            }
         }
-
-    override fun incrementStep(option: String, state: DialogState): DialogState {
-        val incrementedStepIndex = state.stepIndex + 1
-        return state.copy(stepIndex = incrementedStepIndex)
-    }
 
     private fun addPeriodToOptions(state: DialogState, option: String): DialogState {
         val options = state.options as PaymentsOptions
-        when (option) {
-            PaymentsAvailableOptions.PERIOD_ONE_MONTH -> options.period = PaymentsPeriod.ONE_MONTH
-            PaymentsAvailableOptions.PERIOD_THREE_MONTHS -> options.period = PaymentsPeriod.THREE_MONTHS
-            PaymentsAvailableOptions.PERIOD_SIX_MONTHS -> options.period = PaymentsPeriod.SIX_MONTHS
-            else -> throw IllegalStateException("unreachable code")
+        return when (option) {
+            PaymentsAvailableOptions.PERIOD_ONE_MONTH ->
+                state.finish(options.copy(period = PaymentsPeriod.ONE_MONTH))
+
+            PaymentsAvailableOptions.PERIOD_THREE_MONTHS ->
+                state.finish(options.copy(period = PaymentsPeriod.THREE_MONTHS))
+
+            PaymentsAvailableOptions.PERIOD_SIX_MONTHS ->
+                state.finish(options.copy(period = PaymentsPeriod.SIX_MONTHS))
+
+            else ->
+                state.invalidOption(responseMessageService.paymentsWrongPeriod())
         }
-        return state.copy(options = options)
     }
 }

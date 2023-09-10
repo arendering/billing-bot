@@ -8,12 +8,5 @@ class PromisePaymentStep {
 }
 
 data class PromisePaymentAmountStepData(
-    /**
-     * Начальное значение суммы.
-     */
-    val recommendedAmount: Int? = null,
-    /**
-     * Сумма, которая выбирается через калькулятор.
-     */
     val amount: Int? = null
 )

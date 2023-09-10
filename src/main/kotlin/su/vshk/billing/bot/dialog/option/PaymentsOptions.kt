@@ -15,7 +15,7 @@ class PaymentsAvailableOptions private constructor() {
 }
 
 data class PaymentsOptions(
-    var period: String? = null
+    val period: String? = null
 )
 
 class PaymentsPeriod private constructor() {

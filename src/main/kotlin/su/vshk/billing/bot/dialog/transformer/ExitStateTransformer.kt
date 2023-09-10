@@ -8,6 +8,7 @@ import su.vshk.billing.bot.dialog.dto.DialogState
 import su.vshk.billing.bot.dialog.option.ExitAvailableOptions
 import su.vshk.billing.bot.dialog.step.ExitStep
 import su.vshk.billing.bot.message.ResponseMessageService
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 
 @Component
 class ExitStateTransformer(
@@ -17,30 +18,27 @@ class ExitStateTransformer(
     override fun getCommand(): Command =
         Command.EXIT
 
-    override fun initializePreState(user: UserEntity): Mono<DialogState> =
+    override fun initializeState(request: RequestMessageItem, user: UserEntity): Mono<DialogState> =
         Mono.fromCallable {
             DialogState(
                 command = getCommand(),
                 steps = listOf(ExitStep.WARNING),
-                messages = DialogState.MessageContainer(
-                    message = responseMessageService.logoutWarningMessage(),
-                    invalidOptionMessage = responseMessageService.logoutInvalidWarningMessage()
-                )
+                response = DialogState.Response.next(responseMessageService.logoutWarningMessage()),
             )
         }
 
-    override fun isValidOption(user: UserEntity, state: DialogState, option: String): Boolean =
-        option == ExitAvailableOptions.YES
-
-    override fun addOption(user: UserEntity, state: DialogState, option: String): DialogState =
-        when (val step = state.currentStep()) {
-            ExitStep.WARNING -> state
-            else -> throw IllegalStateException("unknown step: '$step'")
+    override fun processOption(request: RequestMessageItem, user: UserEntity, state: DialogState): Mono<DialogState> =
+        Mono.fromCallable {
+            when (val step = state.currentStep()) {
+                ExitStep.WARNING -> processWarningOption(state = state, option = request.input)
+                else -> throw IllegalStateException("unknown step: '$step'")
+            }
         }
 
-    override fun incrementStep(option: String, state: DialogState): DialogState {
-        val incrementedStepIndex = state.stepIndex + 1
-        return state.copy(stepIndex = incrementedStepIndex)
-    }
-
+    private fun processWarningOption(state: DialogState, option: String): DialogState =
+        if (option == ExitAvailableOptions.YES) {
+            state.finish(null)
+        } else {
+            state.invalidOption(responseMessageService.logoutInvalidWarningMessage())
+        }
 }

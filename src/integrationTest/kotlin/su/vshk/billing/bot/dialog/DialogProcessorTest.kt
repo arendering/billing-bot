@@ -19,6 +19,7 @@ import reactor.kotlin.core.publisher.toMono
 import reactor.kotlin.test.test
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dialog.option.*
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 import java.math.BigDecimal
 
 @SpringBootTest
@@ -39,7 +40,8 @@ class DialogProcessorTest {
     fun testStartOk() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId)
-        dialogProcessor.startDialog(user = user, command = Command.START)
+        var request = createRequest(isButtonUpdate = false, isTextUpdate = true, input = Command.START.value, messageId = 1)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.START)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -55,7 +57,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = "user")
+        request = createRequest(isButtonUpdate = false, isTextUpdate = true, input = "user", messageId = 2)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -68,7 +71,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = "1234")
+        request = createRequest(isButtonUpdate = false, isTextUpdate = true, input = "1234", messageId = 3)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -93,7 +97,8 @@ class DialogProcessorTest {
     fun testPaymentsOk() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId)
-        dialogProcessor.startDialog(user = user, command = Command.PAYMENTS)
+        var request = createRequest(input = Command.PAYMENTS.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PAYMENTS)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -106,7 +111,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PaymentsAvailableOptions.PERIOD_ONE_MONTH)
+        request = createRequest(input = PaymentsAvailableOptions.PERIOD_ONE_MONTH)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -130,7 +136,8 @@ class DialogProcessorTest {
     fun testPaymentsCancel() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId)
-        dialogProcessor.startDialog(user = user, command = Command.PAYMENTS)
+        var request = createRequest(input = Command.PAYMENTS.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PAYMENTS)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -143,7 +150,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = GenericAvailableOptions.CANCEL)
+        request = createRequest(input = GenericAvailableOptions.CANCEL)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -161,7 +169,8 @@ class DialogProcessorTest {
     fun testPromisePaymentOk() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, agrmId = 999L)
-        dialogProcessor.startDialog(user = user, command = Command.PROMISE_PAYMENT)
+        var request = createRequest(input = Command.PROMISE_PAYMENT.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PROMISE_PAYMENT)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -183,7 +192,8 @@ class DialogProcessorTest {
                 ret = BigDecimal("500")
             )
         )
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -200,7 +210,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -217,7 +228,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -234,7 +246,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -265,7 +278,8 @@ class DialogProcessorTest {
     fun testPromisePaymentInvalidStep() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, agrmId = 999L)
-        dialogProcessor.startDialog(user = user, command = Command.PROMISE_PAYMENT)
+        var request = createRequest(input = Command.PROMISE_PAYMENT.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PROMISE_PAYMENT)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -287,7 +301,8 @@ class DialogProcessorTest {
                 ret = BigDecimal("2000")
             )
         )
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -314,7 +329,8 @@ class DialogProcessorTest {
     fun testPromisePaymentUpperBound() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, agrmId = 999L)
-        dialogProcessor.startDialog(user = user, command = Command.PROMISE_PAYMENT)
+        var request = createRequest(input = Command.PROMISE_PAYMENT.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PROMISE_PAYMENT)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -336,7 +352,8 @@ class DialogProcessorTest {
                 ret = BigDecimal("1450")
             )
         )
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -353,7 +370,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -363,7 +381,7 @@ class DialogProcessorTest {
                     assertThat(text).contains("Установите необходимую сумму обещанного платежа используя виртуальные кнопки.")
                     assertThat(text).contains("Сумма пополнения:")
                     assertThat(text).contains("1450 ₽")
-                    assertThat(text).contains("Должна быть от 1 до 1500 ₽")
+                    assertThat(text).contains("Не может быть больше 1500 ₽")
                 }
                 true
             }
@@ -371,7 +389,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -402,7 +421,8 @@ class DialogProcessorTest {
     fun testPromisePaymentLowBound() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, agrmId = 999L)
-        dialogProcessor.startDialog(user = user, command = Command.PROMISE_PAYMENT)
+        var request = createRequest(input = Command.PROMISE_PAYMENT.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PROMISE_PAYMENT)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -424,7 +444,8 @@ class DialogProcessorTest {
                 ret = BigDecimal("50")
             )
         )
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -441,7 +462,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE_HUNDRED)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE_HUNDRED)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -451,7 +473,7 @@ class DialogProcessorTest {
                     assertThat(text).contains("Установите необходимую сумму обещанного платежа используя виртуальные кнопки.")
                     assertThat(text).contains("Сумма пополнения:")
                     assertThat(text).contains("50 ₽")
-                    assertThat(text).contains("Должна быть от 1 до 1500 ₽")
+                    assertThat(text).contains("Не может быть меньше 1 ₽")
                 }
                 true
             }
@@ -459,7 +481,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -490,7 +513,8 @@ class DialogProcessorTest {
     fun testPromisePaymentRecommendedPaymentNull() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, agrmId = 999L)
-        dialogProcessor.startDialog(user = user, command = Command.PROMISE_PAYMENT)
+        var request = createRequest(input = Command.PROMISE_PAYMENT.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.PROMISE_PAYMENT)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -512,7 +536,8 @@ class DialogProcessorTest {
                 ret = null
             )
         )
-        dialogProcessor.processOption(telegramId = telegramId, option = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE)
+        dialogProcessor.processOption(request)
             .test()
             .expectErrorMatches {
                 assertThat(it.message).contains("getRecommendedPayment payload is null")
@@ -527,7 +552,8 @@ class DialogProcessorTest {
     fun testNotificationTurnOn() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, paymentNotificationEnabled = false)
-        dialogProcessor.startDialog(user = user, command = Command.NOTIFICATION)
+        var request = createRequest(input = Command.NOTIFICATION.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.NOTIFICATION)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -547,7 +573,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = NotificationAvailableOptions.TURN_ON)
+        request = createRequest(input = NotificationAvailableOptions.TURN_ON)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -570,7 +597,8 @@ class DialogProcessorTest {
     fun testNotificationTurnOff() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId, paymentNotificationEnabled = true)
-        dialogProcessor.startDialog(user = user, command = Command.NOTIFICATION)
+        var request = createRequest(input = Command.NOTIFICATION.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.NOTIFICATION)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -590,7 +618,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = NotificationAvailableOptions.TURN_OFF)
+        request = createRequest(input = NotificationAvailableOptions.TURN_OFF)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -613,7 +642,8 @@ class DialogProcessorTest {
     fun testExitOk() {
         val telegramId = 42L
         val user = UserEntity(telegramId = telegramId)
-        dialogProcessor.startDialog(user = user, command = Command.EXIT)
+        var request = createRequest(input = Command.EXIT.value)
+        dialogProcessor.startDialog(request = request, user = user, command = Command.EXIT)
             .test()
             .expectNextMatches {
                 val state = it.state!!
@@ -627,7 +657,8 @@ class DialogProcessorTest {
 
         assertThat(dialogProcessor.contains(telegramId)).isTrue
 
-        dialogProcessor.processOption(telegramId = telegramId, option = ExitAvailableOptions.YES)
+        request = createRequest(input = ExitAvailableOptions.YES)
+        dialogProcessor.processOption(request)
             .test()
             .expectNextMatches {
                 assertThat(it.user).isEqualTo(user)
@@ -648,4 +679,17 @@ class DialogProcessorTest {
             response.toMono()
         )
     }
+
+    private fun createRequest(
+        isButtonUpdate: Boolean = true,
+        isTextUpdate: Boolean = false,
+        input: String,
+        messageId: Int = 1
+    ) = RequestMessageItem(
+        isButtonUpdate = isButtonUpdate,
+        isTextUpdate = isTextUpdate,
+        chatId = 42L,
+        input = input,
+        messageId = messageId
+    )
 }

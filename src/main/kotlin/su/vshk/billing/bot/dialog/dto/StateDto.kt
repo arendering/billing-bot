@@ -4,8 +4,8 @@ import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 
 data class StateDto(
-    val isFinished: Boolean? = null,
-    val isCancelled: Boolean? = null,
+    val isFinished: Boolean,
+    val isCancelled: Boolean,
     val command: Command? = null,
     val options: Any? = null,
     val responseMessageItem: ResponseMessageItem? = null
@@ -35,7 +35,7 @@ data class StateDto(
         /**
          * Дальнейшее получение пользовательского ввода.
          */
-        fun createGetNextUserInputState(message: ResponseMessageItem) =
+        fun createNextState(message: ResponseMessageItem) =
             StateDto(
                 isFinished = false,
                 isCancelled = false,
