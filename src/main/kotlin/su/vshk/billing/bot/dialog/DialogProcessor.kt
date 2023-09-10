@@ -12,6 +12,7 @@ import su.vshk.billing.bot.dialog.dto.UserStateDto
 import su.vshk.billing.bot.dialog.option.GenericAvailableOptions
 import su.vshk.billing.bot.dialog.transformer.DialogStateTransformer
 import su.vshk.billing.bot.message.ResponseMessageService
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
@@ -22,20 +23,13 @@ class DialogProcessor(
     private val userDialogStates = ConcurrentHashMap<Long, UserDialogState>()
 
     /**
-     * Инициализирует диалог для пользователя.
+     * Получает команду, для которой пользователь находится в диалоге.
      *
-     * @param user пользователь
-     * @param command команда
-     * @return dto диалога
+     * @param telegramId telegramId пользователя
+     * @return команда
      */
-    fun startDialog(user: UserEntity, command: Command): Mono<UserStateDto> =
-        Mono.defer {
-            val transformer = findDialogTransformer(command)
-            transformer.initializePreState(user)
-                .flatMap { transformer.initializeStepData(user, it) }
-                .map { runStepValidation(user, it) }
-                .map { UserStateDto(user, it) }
-        }
+    fun getCommand(telegramId: Long): Command? =
+        userDialogStates[telegramId]?.state?.command
 
     /**
      * Проверяет, находится ли пользователь в диалоге.
@@ -46,32 +40,46 @@ class DialogProcessor(
     fun contains(telegramId: Long): Boolean =
         userDialogStates.containsKey(telegramId)
 
-    fun isLoginDialog(telegramId: Long): Boolean =
-        userDialogStates[telegramId]?.state?.command == Command.START
+    /**
+     * Инициализирует диалог для пользователя.
+     *
+     * @param request запрос
+     * @param user пользователь
+     * @param command комманда
+     * @return dto диалога
+     */
+    fun startDialog(request: RequestMessageItem, user: UserEntity, command: Command): Mono<UserStateDto> =
+        Mono
+            .defer {
+                findDialogTransformer(command)
+                    .initializeState(request, user)
+                    .map { resolveResponse(user, it) }
+            }
+            .onErrorResume {
+                userDialogStates.remove(user.telegramId)
+                throw it
+            }
 
     /**
      * Обработка опции.
      *
-     * @param telegramId telegramId пользователя
-     * @param option опция
+     * @param request запрос
      * @return dto диалога
      */
-    fun processOption(telegramId: Long, option: String): Mono<UserStateDto> =
-        Mono.defer {
-            val (user, dialogState) = unboxDialogState(telegramId)
-            if (option == GenericAvailableOptions.CANCEL) {
-                userDialogStates.remove(telegramId)
-                UserStateDto(
-                    user,
-                    StateDto.createCancelState(responseMessageService.mainMenuMessage())
-                ).toMono()
-            } else {
-                doProcessOption(user, option, dialogState)
-                    .map { UserStateDto(user, it) }
+    fun processOption(request: RequestMessageItem): Mono<UserStateDto> =
+        Mono
+            .defer {
+                val (user, dialogState) = unboxDialogState(request.chatId)
+                if (request.input == GenericAvailableOptions.CANCEL) {
+                    resolveResponse(user, dialogState.cancel(responseMessageService.mainMenuMessage())).toMono()
+                } else {
+                    findDialogTransformer(dialogState.command)
+                        .processOption(request, user, dialogState)
+                        .map { resolveResponse(user, it) }
+                }
             }
-        }
             .onErrorResume {
-                userDialogStates.remove(telegramId)
+                userDialogStates.remove(request.chatId)
                 throw it
             }
 
@@ -80,46 +88,28 @@ class DialogProcessor(
         return Pair(userDialogState?.user!!, userDialogState.state!!)
     }
 
-    private fun doProcessOption(user: UserEntity, option: String, state: DialogState): Mono<StateDto> =
-        Mono.defer {
-            val transformer = findDialogTransformer(state.command!!)
-            if (transformer.isValidOption(user, state, option)) {
-                transformer.addOption(user, state, option)
-                    .let { transformer.incrementStep(option, it) }
-                    .let { runPostIncrement(user, it) }
-            } else {
-                val updatedState = transformer.transformInvalidOptionStepMessage(state)
-                StateDto.createGetNextUserInputState(updatedState.messages?.invalidOptionMessage!!).toMono()
-            }
-        }
+    private fun resolveResponse(user: UserEntity, state: DialogState): UserStateDto {
+        val messageItem = state.response.item
+        val meta = state.response.meta
 
-    private fun runPostIncrement(user: UserEntity, state: DialogState): Mono<StateDto> =
-        Mono.defer {
-            val transformer = findDialogTransformer(state.command!!)
-            if (state.isDialogEnds()) {
+        return when {
+            meta.finish -> {
                 userDialogStates.remove(user.telegramId)
-                StateDto.createFinishState(command = state.command, options = state.options).toMono()
-            } else {
-                transformer.initializeStepData(user, state)
-                    .map { runStepValidation(user, it) }
+                UserStateDto(user, StateDto.createFinishState(state.command, state.options))
             }
-        }
 
-    private fun runStepValidation(user: UserEntity, state: DialogState): StateDto {
-        val transformer = findDialogTransformer(state.command!!)
+            meta.cancel -> {
+                userDialogStates.remove(user.telegramId)
+                UserStateDto(user, StateDto.createCancelState(messageItem!!))
+            }
 
-        return if (transformer.isValidStep(user, state)) {
-            transformer.transformMessage(state).let {
-                userDialogStates[user.telegramId] = UserDialogState(user, it)
-                StateDto.createGetNextUserInputState(it.messages?.message!!)
+            meta.next -> {
+                userDialogStates[user.telegramId] = UserDialogState(user, state)
+                UserStateDto(user, StateDto.createNextState(messageItem!!))
             }
-        } else {
-            transformer.transformInvalidStepMessage(state).let {
-                if (userDialogStates.containsKey(user.telegramId)) {
-                    userDialogStates.remove(user.telegramId)
-                }
-                StateDto.createCancelState(it.messages?.invalidStepMessage!!)
-            }
+
+            else ->
+                throw IllegalStateException("unexpected dialog state meta $meta")
         }
     }
 

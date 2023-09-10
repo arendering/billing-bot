@@ -8,45 +8,49 @@ import su.vshk.billing.bot.dialog.dto.DialogState
 import su.vshk.billing.bot.dialog.option.LoginOptions
 import su.vshk.billing.bot.dialog.step.LoginStep
 import su.vshk.billing.bot.message.ResponseMessageService
+import su.vshk.billing.bot.message.dto.RequestMessageItem
+import su.vshk.billing.bot.service.LoginMessageService
 
 @Component
 class LoginStateTransformer(
-    private val responseMessageService: ResponseMessageService
+    private val responseMessageService: ResponseMessageService,
+    private val loginMessageService: LoginMessageService
 ): DialogStateTransformer {
 
     override fun getCommand(): Command =
         Command.START
 
-    override fun initializePreState(user: UserEntity): Mono<DialogState> =
-        Mono.fromCallable {
-            DialogState(
-                command = getCommand(),
-                options = LoginOptions(),
-                steps = listOf(LoginStep.LOGIN, LoginStep.PASSWORD),
-                messages = DialogState.MessageContainer(
-                    message = responseMessageService.startLoginMessage()
+    override fun initializeState(request: RequestMessageItem, user: UserEntity): Mono<DialogState> =
+        loginMessageService.init(request)
+            .map { _ ->
+                DialogState(
+                    command = getCommand(),
+                    options = LoginOptions(),
+                    steps = listOf(LoginStep.LOGIN, LoginStep.PASSWORD),
+                    response = DialogState.Response.next(responseMessageService.startLoginMessage())
                 )
-            )
+            }
+
+    override fun processOption(request: RequestMessageItem, user: UserEntity, state: DialogState): Mono<DialogState> =
+        Mono.defer {
+            val options = state.options as LoginOptions
+            val option = request.input
+
+            when (val step = state.currentStep()) {
+                LoginStep.LOGIN ->
+                    loginMessageService.add(telegramId = request.chatId, messageId = request.messageId)
+                        .map { _ ->
+                            state.incrementStep(
+                                options = options.copy(login = option),
+                                responseMessageItem = responseMessageService.startPasswordMessage()
+                            )
+                        }
+
+                LoginStep.PASSWORD ->
+                    loginMessageService.add(telegramId = request.chatId, messageId = request.messageId)
+                        .map { state.finish(options.copy(password = option)) }
+
+                else -> throw IllegalStateException("unknown step: '$step'")
+            }
         }
-
-    override fun addOption(user: UserEntity, state: DialogState, option: String): DialogState {
-        val options = state.options as LoginOptions
-        when (val step = state.currentStep()) {
-            LoginStep.LOGIN -> options.login = option
-            LoginStep.PASSWORD -> options.password = option
-            else -> throw IllegalStateException("unknown step: '$step'")
-        }
-        return state.copy(options = options)
-    }
-
-    override fun incrementStep(option: String, state: DialogState): DialogState {
-        val incrementedStepIndex = state.stepIndex + 1
-        return state.copy(
-            stepIndex = incrementedStepIndex,
-            messages = DialogState.MessageContainer(
-                message = responseMessageService.startPasswordMessage()
-            )
-        )
-    }
-
 }

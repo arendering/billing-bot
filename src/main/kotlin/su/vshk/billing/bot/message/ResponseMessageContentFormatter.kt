@@ -229,52 +229,78 @@ class ResponseMessageContentFormatter(
             buttons = clientPromisePaymentWarningButtons()
         )
 
-    fun clientPromisePaymentAmountTextTemplate(): String =
-        clientPromisePaymentAmountBaseMessageFormatter().build()
-
-    fun clientPromisePaymentAmount() =
+    fun clientPromisePaymentAmount(recommendedAmount: Int) =
         createContent(
-            text = "", // сюда будет подставляться значение из шаблона
-            buttons = listOf(
-                listOf(
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.plus.one") + " $RUB",
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE
-                    ),
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.minus.one") + " $RUB",
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE
-                    )
-                ),
-                listOf(
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.plus.twenty.five") + " $RUB",
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_PLUS_TWENTY_FIVE
-                    ),
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.minus.twenty.five") + " $RUB",
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_MINUS_TWENTY_FIVE
-                    )
-                ),
-                listOf(
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.plus.one.hundred") + " $RUB",
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED
-                    ),
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.minus.one.hundred") + " $RUB",
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE_HUNDRED
-                    )
-                ),
-                listOf(
-                    ResponseMessageItem.InlineKeyboardItem(
-                        label = getText("promise.payment.amount.calculator.submit"),
-                        callbackData = PromisePaymentAvailableOptions.AMOUNT_SUBMIT
-                    ),
-                ),
-                listOf(
-                    getCancelButton()
+            text = clientPromisePaymentAmountBaseMessageFormatter(recommendedAmount).build(),
+            buttons = clientPromisePaymentCalculatorButtons()
+        )
+
+    fun clientPromisePaymentTooLowAmountMessage(amount: Int, lowerBound: Int) =
+        createContent(
+            text = clientPromisePaymentAmountBaseMessageFormatter(amount)
+                .addFormattedText(
+                    text = getText("promise.payment.amount.footer.invalid.too.low"),
+                    textType = TextType.ITALIC,
+                    value = "$lowerBound $RUB",
+                    valueType = TextType.PLAIN
                 )
+                .build(),
+            buttons = clientPromisePaymentCalculatorButtons()
+        )
+
+    fun clientPromisePaymentTooHighAmountMessage(amount: Int, upperBound: Int) =
+        createContent(
+            text = clientPromisePaymentAmountBaseMessageFormatter(amount)
+                .addFormattedText(
+                    text = getText("promise.payment.amount.footer.invalid.too.high"),
+                    textType = TextType.ITALIC,
+                    value = "$upperBound $RUB",
+                    valueType = TextType.PLAIN
+                )
+                .build(),
+            buttons = clientPromisePaymentCalculatorButtons()
+        )
+
+    fun clientPromisePaymentCalculatorButtons(): List<List<ResponseMessageItem.InlineKeyboardItem>> =
+        listOf(
+            listOf(
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.plus.one") + " $RUB",
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE
+                ),
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.minus.one") + " $RUB",
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE
+                )
+            ),
+            listOf(
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.plus.twenty.five") + " $RUB",
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_PLUS_TWENTY_FIVE
+                ),
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.minus.twenty.five") + " $RUB",
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_MINUS_TWENTY_FIVE
+                )
+            ),
+            listOf(
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.plus.one.hundred") + " $RUB",
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED
+                ),
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.minus.one.hundred") + " $RUB",
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE_HUNDRED
+                )
+            ),
+            listOf(
+                ResponseMessageItem.InlineKeyboardItem(
+                    label = getText("promise.payment.amount.calculator.submit"),
+                    callbackData = PromisePaymentAvailableOptions.AMOUNT_SUBMIT
+                ),
+            ),
+            listOf(
+                getCancelButton()
             )
         )
 
@@ -283,11 +309,6 @@ class ResponseMessageContentFormatter(
             text = getText("promise.payment.debts.overdue"),
             buttons = backToMainMenuButton()
         )
-
-    fun clientPromisePaymentAmountInvalidOptionTextTemplate(): String =
-        clientPromisePaymentAmountBaseMessageFormatter()
-            .addText(text = getText("promise.payment.amount.footer.invalid") + " $RUB", textType = TextType.ITALIC)
-            .build()
 
     fun clientPromisePaymentSuccess() =
         createContent(
@@ -324,14 +345,14 @@ class ResponseMessageContentFormatter(
             )
         )
 
-    private fun clientPromisePaymentAmountBaseMessageFormatter(): HtmlMarkupFormatter =
+    private fun clientPromisePaymentAmountBaseMessageFormatter(amount: Int): HtmlMarkupFormatter =
         HtmlMarkupFormatter()
             .addText(text = getText("promise.payment.amount.header"))
             .addLineBreak()
             .addValue(
                 header = getText("promise.payment.amount.body.header"),
                 headerType = TextType.BOLD_UNDERLINED,
-                value = getText("promise.payment.amount.body.value") + " $RUB",
+                value = "$amount $RUB",
                 valueType = TextType.BOLD
             )
 

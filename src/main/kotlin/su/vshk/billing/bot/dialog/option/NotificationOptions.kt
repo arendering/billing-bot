@@ -8,5 +8,5 @@ class NotificationAvailableOptions private constructor() {
 }
 
 data class NotificationOptions(
-    var enable: Boolean? = null
+    val enable: Boolean? = null
 )

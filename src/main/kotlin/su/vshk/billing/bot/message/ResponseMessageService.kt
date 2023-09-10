@@ -105,8 +105,14 @@ class ResponseMessageService(
     fun clientPromisePaymentInvalidWarningMessage() =
         createEditMessage(content = contentFormatter.clientPromisePaymentInvalidWarning())
 
-    fun clientPromisePaymentAmountMessage() =
-        createEditMessage(content = contentFormatter.clientPromisePaymentAmount())
+    fun clientPromisePaymentAmountMessage(amount: Int) =
+        createEditMessage(content = contentFormatter.clientPromisePaymentAmount(amount))
+
+    fun clientPromisePaymentTooLowAmountMessage(amount: Int, lowerBound: Int) =
+        createEditMessage(content = contentFormatter.clientPromisePaymentTooLowAmountMessage(amount, lowerBound))
+
+    fun clientPromisePaymentTooHighAmountMessage(amount: Int, upperBound: Int) =
+        createEditMessage(content = contentFormatter.clientPromisePaymentTooHighAmountMessage(amount, upperBound))
 
     fun clientPromisePaymentDebtsOverdueMessage() =
         createEditMessage(content = contentFormatter.clientPromisePaymentDebtsOverdue())
