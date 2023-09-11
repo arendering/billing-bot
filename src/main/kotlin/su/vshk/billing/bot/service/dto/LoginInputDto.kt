@@ -13,4 +13,14 @@ data class LoginInputDto(
      * Список всех id сообщений из стартового диалога
      */
     val messageIds: List<Int> = emptyList()
-)
+) {
+    fun addMessageId(messageId: Int): LoginInputDto {
+        val ids = this.messageIds
+        return if (ids.contains(messageId)) {
+            this
+        } else {
+            val updatedIds = ids.plus(messageId)
+            this.copy(messageIds = updatedIds)
+        }
+    }
+}
