@@ -27,17 +27,17 @@ class LoginMessageService {
 
     fun add(telegramId: Long, messageId: Int): Mono<Int> =
         Mono.fromCallable {
-            val dto = messages[telegramId]!!
-            val updatedMessageIds = dto.messageIds.plus(messageId)
-            val updatedDto = dto.copy(messageIds = updatedMessageIds)
-            messages[telegramId] = updatedDto
+            val updatedDto = messages[telegramId]
+                ?.addMessageId(messageId)
+                ?: throw RuntimeException("could not found message ids for user '$telegramId'")
 
+            messages[telegramId] = updatedDto
             messageId
         }
 
     fun remove(telegramId: Long): Mono<LoginMessageDto> =
         Mono.fromCallable {
-            val dto = messages.remove(telegramId)!!
+            val dto = messages.remove(telegramId) ?: throw RuntimeException("could not found message ids for user '$telegramId'")
             val messageIds = dto.messageIds
 
             when {
