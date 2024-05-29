@@ -14,7 +14,11 @@ class AmountUtilsTest {
     ])
     fun testFormatAmount(amount: String, expected: String) {
         assertThat(
-            AmountUtils.formatAmount(BigDecimal(amount))
+            AmountUtils.formatAmount(
+                amount = BigDecimal(amount),
+                splitByThousands = true,
+                currencyChar = null
+            )
         ).isEqualTo(expected)
     }
 

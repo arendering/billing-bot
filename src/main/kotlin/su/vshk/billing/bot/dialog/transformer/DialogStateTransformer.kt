@@ -6,10 +6,13 @@ import reactor.core.publisher.Mono
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 
+/**
+ * Обработчик пользовательского ввода для диалоговых команд.
+ */
 interface DialogStateTransformer {
 
     /**
-     * Команда для которой работает трансформер.
+     * Команда, для которой работает обработчик.
      */
     fun getCommand(): Command
 

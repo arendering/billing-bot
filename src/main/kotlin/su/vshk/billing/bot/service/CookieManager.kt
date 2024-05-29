@@ -12,34 +12,34 @@ import java.util.concurrent.atomic.AtomicReference
 
 @Service
 class CookieManager {
-    // Ключ - uid, значение - клиентская кука
+    // Ключ - userId, значение - клиентская кука
     private val clientCookies = ConcurrentHashMap<Long, Cookie>()
     private val managerCookie = AtomicReference<Cookie>()
     private val log = getLogger()
 
-    fun getClientCookie(uid: Long): Mono<Optional<String>> =
+    fun getClientCookie(userId: Long): Mono<Optional<String>> =
         Mono.deferContextual { contextView ->
             Mono.fromCallable {
-                val cookie = clientCookies[uid]?.let { resolveActual(it) }
-                log.debugTraceId(context = contextView, msg = "get client cookie from cache: uid '$uid', cookie '$cookie'")
+                val cookie = clientCookies[userId]?.let { resolveActual(it) }
+                log.debugTraceId(context = contextView, msg = "get client cookie from cache: userId '$userId', cookie '$cookie'")
                 Optional.ofNullable(cookie)
             }
         }
 
-    fun putClientCookie(uid: Long, cookie: Cookie): Mono<String> =
+    fun putClientCookie(userId: Long, cookie: Cookie): Mono<String> =
         Mono.deferContextual { contextView ->
             Mono.fromCallable {
-                clientCookies[uid] = cookie
-                log.debugTraceId(context = contextView, msg = "put client cookie in cache: uid '$uid', cookie '$cookie'")
+                clientCookies[userId] = cookie
+                log.debugTraceId(context = contextView, msg = "put client cookie in cache: userId '$userId', cookie '$cookie'")
                 cookie.value
             }
         }
 
-    fun removeClientCookie(uid: Long): Mono<Optional<String>> =
+    fun removeClientCookie(userId: Long): Mono<Optional<String>> =
         Mono.deferContextual { contextView ->
             Mono.fromCallable {
-                val cookie = clientCookies.remove(uid)
-                log.debugTraceId(context = contextView, msg = "remove client cookie from cache: uid '$uid', cookie '$cookie'")
+                val cookie = clientCookies.remove(userId)
+                log.debugTraceId(context = contextView, msg = "remove client cookie from cache: userId '$userId', cookie '$cookie'")
                 Optional.ofNullable(cookie?.value)
             }
         }

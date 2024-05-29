@@ -10,7 +10,8 @@ data class BotProperties(
     var name: String? = null,
     var webClient: WebClientProperties = WebClientProperties(),
     var errorGroupNotification: ErrorGroupNotificationProperties = ErrorGroupNotificationProperties(),
-    var paymentNotification: PaymentNotificationProperties = PaymentNotificationProperties()
+    var paymentNotification: PaymentNotificationProperties = PaymentNotificationProperties(),
+    var cache: CacheProperties = CacheProperties()
 ) {
 
     data class WebClientProperties(
@@ -35,5 +36,9 @@ data class BotProperties(
     data class ManagerCredentials(
         var login: String? = null,
         var password: String? = null
+    )
+
+    data class CacheProperties(
+        var sbssKnowledgeExpiredHours: Long = 24
     )
 }

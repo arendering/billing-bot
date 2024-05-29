@@ -12,7 +12,7 @@ bot:
 spring:
   datasource:
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-    url: jdbc:tc:mysql:5.7.34:///billing
+    url: jdbc:tc:mysql:8.0.36:///billing
     password:
   jpa:
     properties:
@@ -26,5 +26,7 @@ spring:
     change-log: classpath:/db/changelog.sql
 
 logging:
+  level:
+    su.vshk.billing.bot.: debug
   file:
     name:

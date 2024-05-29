@@ -9,7 +9,6 @@ data class DialogState(
      */
     val command: Command,
 
-    //TODO: сделать generic'ом
     /**
      * Опции, введенные пользователем.
      */
@@ -26,40 +25,43 @@ data class DialogState(
     val stepIndex: Int = 0,
 
     /**
-     * Дополнительные данные, которые нужны для обработки опции на текущем шаге.
-     */
-    val stepData: Any? = null,
-
-    /**
      * Ответ пользователю.
      */
     val response: Response
 ) {
+    /**
+     * Получает текущий шаг диалога.
+     */
     fun currentStep(): String = steps[stepIndex]
 
-    fun incrementStep(options: Any?, stepData: Any? = null, responseMessageItem: ResponseMessageItem): DialogState =
+    /**
+     * Переходит на следующий шаг диалога.
+     */
+    fun incrementStep(options: Any?, responseMessageItem: ResponseMessageItem): DialogState =
         this.copy(
             options = options,
-            stepData = stepData,
             stepIndex = this.stepIndex + 1,
             response = Response.next(responseMessageItem)
         )
 
-    fun invalidOption(responseMessageItem: ResponseMessageItem): DialogState =
+    /**
+     * Остаться на текущем шаге диалога.
+     */
+    fun stayCurrentStep(responseMessageItem: ResponseMessageItem): DialogState =
         this.copy(response = Response.next(responseMessageItem))
 
-    fun updateStepData(stepData: Any?, responseMessageItem: ResponseMessageItem): DialogState =
-        this.copy(
-            stepData = stepData,
-            response = Response.next(responseMessageItem)
-        )
-
+    /**
+     * Завершить успешно диалог.
+     */
     fun finish(options: Any?): DialogState =
         this.copy(
             options = options,
             response = Response.finish()
         )
 
+    /**
+     * Отменить диалог.
+     */
     fun cancel(responseMessageItem: ResponseMessageItem): DialogState =
         this.copy(response = Response.cancel(responseMessageItem))
 

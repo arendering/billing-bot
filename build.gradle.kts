@@ -36,13 +36,14 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+	implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
 	testImplementation("com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0")
-	testImplementation("org.testcontainers:testcontainers:1.17.2")
-	testImplementation("org.testcontainers:mysql:1.17.2")
-	testImplementation("org.testcontainers:junit-jupiter:1.17.2")
+	testImplementation("org.testcontainers:testcontainers:1.19.8")
+	testImplementation("org.testcontainers:mysql:1.19.8")
+	testImplementation("org.testcontainers:junit-jupiter:1.19.8")
 }
 
 tasks.withType<KotlinCompile> {

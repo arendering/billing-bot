@@ -11,14 +11,15 @@ import su.vshk.billing.bot.dialog.dto.UserDialogState
 import su.vshk.billing.bot.dialog.dto.UserStateDto
 import su.vshk.billing.bot.dialog.option.GenericAvailableOptions
 import su.vshk.billing.bot.dialog.transformer.DialogStateTransformer
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.RequestMessageItem
+import su.vshk.billing.bot.message.dto.ResponseMessageItem
+import su.vshk.billing.bot.message.response.CommonMessageService
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class DialogProcessor(
     private val dialogTransformers: List<DialogStateTransformer>,
-    private val responseMessageService: ResponseMessageService
+    private val commonMessageService: CommonMessageService
 ) {
     private val userDialogStates = ConcurrentHashMap<Long, UserDialogState>()
 
@@ -39,6 +40,15 @@ class DialogProcessor(
      */
     fun contains(telegramId: Long): Boolean =
         userDialogStates.containsKey(telegramId)
+
+    /**
+     * Получает последнее сообщение в диалоге.
+     *
+     * @param telegramId telegramId пользователя
+     * @return сообщение, которое отправилось пользователю
+     */
+    fun getLastResponseMessageItemContent(telegramId: Long): ResponseMessageItem.Content? =
+        userDialogStates[telegramId]?.state?.response?.item?.content
 
     /**
      * Инициализирует диалог для пользователя.
@@ -71,7 +81,7 @@ class DialogProcessor(
             .defer {
                 val (user, dialogState) = unboxDialogState(request.chatId)
                 if (request.input == GenericAvailableOptions.CANCEL) {
-                    resolveResponse(user, dialogState.cancel(responseMessageService.mainMenuMessage())).toMono()
+                    resolveResponse(user, dialogState.cancel(commonMessageService.showMainMenu())).toMono()
                 } else {
                     findDialogTransformer(dialogState.command)
                         .processOption(request, user, dialogState)

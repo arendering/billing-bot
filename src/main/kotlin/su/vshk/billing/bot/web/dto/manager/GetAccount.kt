@@ -7,7 +7,7 @@ import java.math.BigDecimal
 
 data class GetAccountRequest(
     @JsonProperty("id")
-    val uid: Long? = null
+    val userId: Long? = null
 )
 
 data class GetAccountResponse(

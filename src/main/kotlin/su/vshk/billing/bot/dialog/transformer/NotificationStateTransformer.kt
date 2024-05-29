@@ -4,65 +4,76 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.UserEntity
+import su.vshk.billing.bot.dao.service.PaymentNotificationDaoService
 import su.vshk.billing.bot.dialog.dto.DialogState
-import su.vshk.billing.bot.dialog.option.NotificationAvailableOptions
 import su.vshk.billing.bot.dialog.option.NotificationOptions
 import su.vshk.billing.bot.dialog.step.NotificationStep
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.RequestMessageItem
+import su.vshk.billing.bot.message.dto.ResponseMessageItem
+import su.vshk.billing.bot.message.response.NotificationMessageService
+import su.vshk.billing.bot.service.VgroupsService
 
 @Component
 class NotificationStateTransformer(
-    private val responseMessageService: ResponseMessageService
+    private val vgroupsService: VgroupsService,
+    private val paymentNotificationDaoService: PaymentNotificationDaoService,
+    private val notificationMessageService: NotificationMessageService
 ): DialogStateTransformer {
 
     override fun getCommand(): Command =
         Command.NOTIFICATION
 
     override fun initializeState(request: RequestMessageItem, user: UserEntity): Mono<DialogState> =
-        Mono.fromCallable {
-            DialogState(
-                command = getCommand(),
-                options = NotificationOptions(),
-                steps = listOf(NotificationStep.SWITCH),
-                response = DialogState.Response.next(
-                    if (user.paymentNotificationEnabled == true) {
-                        responseMessageService.notificationDisableMessage()
-                    } else {
-                        responseMessageService.notificationEnableMessage()
-                    }
+        getInitResponseMessageItem(user)
+            .map { responseMessageItem ->
+                DialogState(
+                    command = getCommand(),
+                    options = NotificationOptions(),
+                    steps = listOf(NotificationStep.SWITCH),
+                    response = DialogState.Response.next(responseMessageItem)
                 )
-            )
-        }
+            }
 
     override fun processOption(request: RequestMessageItem, user: UserEntity, state: DialogState): Mono<DialogState> =
         Mono.fromCallable {
             when (val step = state.currentStep()) {
-                NotificationStep.SWITCH -> addSwitchOption(user = user, state = state, option = request.input)
+                NotificationStep.SWITCH -> addSwitchOption(state = state, option = request.input)
                 else -> throw IllegalStateException("unknown step: '$step'")
             }
         }
 
-    private fun addSwitchOption(user: UserEntity, state: DialogState, option: String): DialogState {
-        val options = state.options as NotificationOptions
-        return when {
-            user.paymentNotificationEnabled == true && option == NotificationAvailableOptions.TURN_OFF ->
-                state.finish(
-                    options.copy(enable = false)
-                )
+    private fun getInitResponseMessageItem(user: UserEntity): Mono<ResponseMessageItem> =
+        paymentNotificationDaoService.findById(user.telegramId)
+            .flatMap { notificationEntityOpt ->
+                vgroupsService.getInternetVgroups(user.userId!!)
+                    .map { vgroups ->
+                        val notificationEntity = notificationEntityOpt.orElse(null)
+                        val userHasSingleAgreement = vgroups.size == 1
+                        val isNotificationEnabled = notificationEntityOpt.isPresent
 
-            user.paymentNotificationEnabled == true && option != NotificationAvailableOptions.TURN_OFF ->
-                state.invalidOption(responseMessageService.notificationInvalidDisableMessage())
+                        when {
+                            isNotificationEnabled && userHasSingleAgreement ->
+                                notificationMessageService.disable()
 
-            user.paymentNotificationEnabled == false && option == NotificationAvailableOptions.TURN_ON ->
-                state.finish(
-                    options.copy(enable = true)
-                )
+                            isNotificationEnabled && notificationEntity.isSingleType() ->
+                                notificationMessageService.enableForAllAgreementsOrDisable()
 
-            user.paymentNotificationEnabled == false && option != NotificationAvailableOptions.TURN_ON ->
-                state.invalidOption(responseMessageService.notificationInvalidEnableMessage())
+                            isNotificationEnabled && notificationEntity.isAllType() ->
+                                notificationMessageService.enableForSingleAgreementOrDisable()
 
-            else -> throw IllegalStateException("unreachable code")
-        }
-    }
+                            !isNotificationEnabled && userHasSingleAgreement ->
+                                notificationMessageService.enable()
+
+                            !isNotificationEnabled && !userHasSingleAgreement ->
+                                notificationMessageService.enableForSingleAgreementOrEnableForAllAgreements()
+
+                            else -> throw IllegalStateException("unreachable code")
+                        }
+                    }
+            }
+
+    private fun addSwitchOption(state: DialogState, option: String): DialogState =
+        (state.options as NotificationOptions)
+            .copy(switch = option)
+            .let { state.finish(it) }
 }

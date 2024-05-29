@@ -1,12 +1,42 @@
 package su.vshk.billing.bot.service.dto
 
-import su.vshk.billing.bot.web.dto.manager.GetAccountRet
-import su.vshk.billing.bot.web.dto.manager.GetVgroupsRet
 import java.math.BigDecimal
 
 data class InfoDto(
-    val getVgroupsRet: GetVgroupsRet,
+    /**
+     * ФИО
+     */
+    val username: String?,
+    /**
+     * Номер договора
+     */
+    val agreementNumber: String?,
+    /**
+     * Статус интернета
+     */
+    val blocked: Long? = null,
+    /**
+     * Баланс
+     */
+    val balance: BigDecimal?,
+    /**
+     * Несколько ли договоров у пользователя
+     */
+    val multipleAgreements: Boolean,
+    /**
+     * Сумма ежемесячного платежа
+     */
     val defaultRecommendedPayment: BigDecimal,
+    /**
+     * Рекомендуемая к внесению сумма
+     */
     val actualRecommendedPayment: BigDecimal,
-    val getAccountRet: GetAccountRet
+    /**
+     * Сумма обещанного платежа
+     */
+    val promiseCredit: BigDecimal?,
+    /**
+     * Адрес электронной почты
+     */
+    val email: String?
 )

@@ -18,8 +18,8 @@ class CookieManagerTest {
 
     @Test
     fun testClientCookie() {
-        val uid = 13L
-        cookieManager.getClientCookie(uid)
+        val userId = 13L
+        cookieManager.getClientCookie(userId)
             .putTraceId()
             .test()
             .expectNextMatches {
@@ -30,7 +30,7 @@ class CookieManagerTest {
 
         cookieManager
             .putClientCookie(
-                uid = uid,
+                userId = userId,
                 cookie = Cookie(
                     value = "abc123",
                     expTimestampSeconds = Instant.now().epochSecond.plus(20)
@@ -44,7 +44,7 @@ class CookieManagerTest {
             }
             .verifyComplete()
 
-        cookieManager.getClientCookie(uid)
+        cookieManager.getClientCookie(userId)
             .putTraceId()
             .test()
             .expectNextMatches {

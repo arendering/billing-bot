@@ -23,21 +23,21 @@ class RecommendedPaymentService(
         private const val ACTUAL_MODE = 1L
     }
 
-    fun getDefault(agrmId: Long): Mono<BigDecimal> =
-        doGetRecommendedPayment(agrmId = agrmId, mode = DEFAULT_MODE)
+    fun getDefault(agreementId: Long): Mono<BigDecimal> =
+        doGetRecommendedPayment(agreementId = agreementId, mode = DEFAULT_MODE)
 
-    fun getActual(agrmId: Long): Mono<BigDecimal> =
-        doGetRecommendedPayment(agrmId = agrmId, mode = ACTUAL_MODE)
+    fun getActual(agreementId: Long): Mono<BigDecimal> =
+        doGetRecommendedPayment(agreementId = agreementId, mode = ACTUAL_MODE)
 
-    private fun doGetRecommendedPayment(agrmId: Long, mode: Long): Mono<BigDecimal> =
+    private fun doGetRecommendedPayment(agreementId: Long, mode: Long): Mono<BigDecimal> =
         billingWebClient
             .getRecommendedPayment(
                 GetRecommendedPaymentRequest(
-                    agrmId = agrmId,
+                    agreementId = agreementId,
                     mode = mode
                 )
             )
             .map {
-                it.ret ?: throw RuntimeException("getRecommendedPayment payload is null")
+                it.amount ?: throw RuntimeException("getRecommendedPayment payload is null")
             }
 }

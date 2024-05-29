@@ -1,6 +1,8 @@
 package su.vshk.billing.bot.service.dto
 
-data class PaymentsDto(
+import java.math.BigDecimal
+
+data class PaymentHistoryDto(
     val dateFrom: String,
     val dateTo: String,
     val payments: List<PaymentDto>? = null
@@ -9,7 +11,7 @@ data class PaymentsDto(
         val date: String? = null,
         val time: String? = null,
         val id: String? = null,
-        val amount: String? = null,
+        val amount: BigDecimal? = null,
         val manager: String? = null
     )
 }

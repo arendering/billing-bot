@@ -6,7 +6,3 @@ class PromisePaymentStep {
         const val AMOUNT = "amount"
     }
 }
-
-data class PromisePaymentAmountStepData(
-    val amount: Int? = null
-)

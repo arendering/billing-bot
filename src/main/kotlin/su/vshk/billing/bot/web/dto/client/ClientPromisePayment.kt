@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class ClientPromisePaymentRequest(
     @JsonProperty("agrm")
-    val agrmId: Long? = null,
+    val agreementId: Long? = null,
+
     @JsonProperty("summ")
     val amount: Int? = null
 )

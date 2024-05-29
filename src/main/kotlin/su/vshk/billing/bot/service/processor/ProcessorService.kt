@@ -9,9 +9,9 @@ import su.vshk.billing.bot.dao.model.GenericCommand
 import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dao.service.UserDaoService
 import su.vshk.billing.bot.dialog.DialogProcessor
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
+import su.vshk.billing.bot.message.response.CommonMessageService
 import su.vshk.billing.bot.service.PaymentNotificationService
 import su.vshk.billing.bot.service.executor.CommandExecutor
 import su.vshk.billing.bot.util.errorTraceId
@@ -21,10 +21,10 @@ import su.vshk.billing.bot.util.infoTraceId
 @Service
 class ProcessorService(
     private val dialogProcessor: DialogProcessor,
-    private val responseMessageService: ResponseMessageService,
     private val executors: List<CommandExecutor>,
     private val paymentNotificationService: PaymentNotificationService,
-    private val userDaoService: UserDaoService
+    private val userDaoService: UserDaoService,
+    private val commonMessageService: CommonMessageService
 ) {
     companion object {
         private val log = getLogger()
@@ -52,7 +52,7 @@ class ProcessorService(
             .onErrorResume {
                 Mono.deferContextual { context ->
                     log.errorTraceId(context, it.stackTraceToString())
-                    responseMessageService.somethingWentWrongMessage().toMono()
+                    commonMessageService.showGenericError().toMono()
                 }
             }
 
@@ -68,10 +68,20 @@ class ProcessorService(
     }
 
     private fun updateDialog(request: RequestMessageItem): Mono<ResponseMessageItem> =
-        if (request.isTextUpdate && dialogProcessor.getCommand(request.chatId) != Command.START) {
-            responseMessageService.deleteMessage(request.messageId).toMono()
-        } else {
-            doUpdateDialog(request)
+        when {
+            request.isButtonUpdate || isLoginOption(request) ->
+                doUpdateDialog(request)
+
+            isStartInput(request) ->
+                commonMessageService.repeatLastDialogMessage(
+                    messageIdToDelete = request.messageId,
+                    content = dialogProcessor.getLastResponseMessageItemContent(request.chatId)!!
+                ).toMono()
+
+            request.isTextUpdate ->
+                commonMessageService.deleteMessage(request.messageId).toMono()
+
+            else -> throw IllegalStateException("unreachable code")
         }
 
     private fun processCommand(request: RequestMessageItem): Mono<ResponseMessageItem> =
@@ -80,11 +90,11 @@ class ProcessorService(
                 val command = Command.get(request.input)
                 if (userOpt.isPresent) {
                     when {
-                        request.isTextUpdate && command == Command.START ->
-                            responseMessageService.repeatMenuMessage(request.messageId).toMono()
+                        isStartInput(request) ->
+                            commonMessageService.repeatMenu(request.messageId).toMono()
 
                         request.isTextUpdate ->
-                            responseMessageService.deleteMessage(request.messageId).toMono()
+                            commonMessageService.deleteMessage(request.messageId).toMono()
 
                         request.isButtonUpdate ->
                             doProcessCommand(request = request, user = userOpt.get(), command = command ?: Command.MENU)
@@ -95,7 +105,7 @@ class ProcessorService(
                     doProcessCommand(
                         request = request,
                         user = UserEntity(telegramId = request.chatId),
-                        command = Command.START
+                        command = Command.LOGIN
                     )
                 }
             }
@@ -123,4 +133,11 @@ class ProcessorService(
     private fun findExecutor(command: Command): CommandExecutor =
         executors.find { it.getCommand() == command }
             ?: throw RuntimeException("could not find executor for command '${command.value}'")
+
+    private fun isLoginOption(request: RequestMessageItem): Boolean =
+        request.isTextUpdate && dialogProcessor.getCommand(request.chatId) == Command.LOGIN
+
+    private fun isStartInput(request: RequestMessageItem): Boolean =
+        request.isTextUpdate && Command.get(request.input) == Command.LOGIN
+
 }

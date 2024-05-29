@@ -10,6 +10,7 @@ class PromisePaymentAvailableOptions private constructor() {
         const val AMOUNT_PLUS_ONE_HUNDRED = "+100"
         const val AMOUNT_MINUS_ONE_HUNDRED = "-100"
         const val AMOUNT_SUBMIT = "/submit"
+        const val CANCEL_AMOUNT_STEP = "/cancel_amount_step"
 
         val calculatorOptions = listOf(
             AMOUNT_PLUS_ONE,

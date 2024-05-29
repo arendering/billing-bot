@@ -9,15 +9,16 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 
 data class GetPaymentsRequest(
-    val flt: GetPaymentsFlt? = null
+    @JsonProperty("flt")
+    val filter: GetPaymentsFilter? = null
 )
 
-data class GetPaymentsFlt(
+data class GetPaymentsFilter(
     /**
      * Идентификатор договора
      */
     @JsonProperty("agrmid")
-    val agrmId: Long? = null,
+    val agreementId: Long? = null,
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     @JsonProperty("dtfrom")
@@ -29,6 +30,7 @@ data class GetPaymentsFlt(
 )
 
 data class GetPaymentsResponse(
+    @JsonProperty("ret")
     val ret: List<GetPaymentsRet>? = null
 )
 
