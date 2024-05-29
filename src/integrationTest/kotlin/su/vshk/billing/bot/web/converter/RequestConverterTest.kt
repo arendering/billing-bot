@@ -3,7 +3,7 @@ package su.vshk.billing.bot.web.converter
 import org.assertj.core.api.Assertions.assertThat
 import su.vshk.billing.bot.util.getLogger
 import su.vshk.billing.bot.web.client.BillingMethod
-import su.vshk.billing.bot.web.dto.manager.GetPaymentsFlt
+import su.vshk.billing.bot.web.dto.manager.GetPaymentsFilter
 import su.vshk.billing.bot.web.dto.manager.GetPaymentsRequest
 import su.vshk.billing.bot.web.dto.manager.LoginRequest
 import org.junit.jupiter.api.Test
@@ -35,8 +35,8 @@ class RequestConverterTest {
     @Test
     fun testGetPaymentsRequest() {
         val request = GetPaymentsRequest(
-            flt = GetPaymentsFlt(
-                agrmId = 42L,
+            filter = GetPaymentsFilter(
+                agreementId = 42L,
                 dateFrom = LocalDate.of(2010, 6, 12),
                 dateTo = LocalDate.of(2020, 10, 30)
             )

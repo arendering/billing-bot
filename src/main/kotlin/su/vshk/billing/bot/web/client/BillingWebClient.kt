@@ -5,7 +5,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.dao.model.UserEntity
-import su.vshk.billing.bot.service.LoginService
+import su.vshk.billing.bot.service.BillingLoginService
 import su.vshk.billing.bot.util.WebUtils
 import su.vshk.billing.bot.web.converter.RequestConverter
 import su.vshk.billing.bot.web.converter.ResponseConverter
@@ -23,21 +23,21 @@ class BillingWebClient(
     properties: BotProperties,
     private val requestConverter: RequestConverter,
     private val responseConverter: ResponseConverter,
-    private val loginService: LoginService
+    private val billingLoginService: BillingLoginService
 ): BillingBaseWebClient(webClient, properties) {
 
     /**
-     * Получает uid пользователя.
+     * Получает userId пользователя.
      */
     fun getClientId(request: ClientLoginRequest): Mono<Optional<Long>> =
-        loginService.clientLogin(request)
+        billingLoginService.clientLogin(request)
 
     /**
      * Возвращает список учетных записей.
      */
     fun getVgroups(request: GetVgroupsRequest): Mono<GetVgroupsResponse> =
         WebUtils.retryIfAuthFailedExecute {
-            loginService.getManagerCookie()
+            billingLoginService.getManagerCookie()
                 .flatMap {
                     doRequest(
                         method = BillingMethod.GET_VGROUPS,
@@ -53,7 +53,7 @@ class BillingWebClient(
      */
     fun getPayments(request: GetPaymentsRequest): Mono<GetPaymentsResponse> =
         WebUtils.retryIfAuthFailedExecute {
-            loginService.getManagerCookie()
+            billingLoginService.getManagerCookie()
                 .flatMap {
                     doRequest(
                         method = BillingMethod.GET_PAYMENTS,
@@ -69,7 +69,7 @@ class BillingWebClient(
      */
     fun clientPromisePayment(user: UserEntity, request: ClientPromisePaymentRequest): Mono<BillingResponseItem<ClientPromisePaymentResponse>> =
         WebUtils.retryIfAuthFailedExecute {
-            loginService.getClientCookie(user)
+            billingLoginService.getClientCookie(user)
                 .flatMap {
                     doRequest(
                         method = BillingMethod.CLIENT_PROMISE_PAYMENT,
@@ -85,7 +85,7 @@ class BillingWebClient(
      */
     fun getRecommendedPayment(request: GetRecommendedPaymentRequest): Mono<GetRecommendedPaymentResponse> =
         WebUtils.retryIfAuthFailedExecute {
-            loginService.getManagerCookie()
+            billingLoginService.getManagerCookie()
                 .flatMap {
                     doRequest(
                         method = BillingMethod.GET_RECOMMENDED_PAYMENT,
@@ -101,13 +101,29 @@ class BillingWebClient(
      */
     fun getAccount(request: GetAccountRequest): Mono<GetAccountResponse> =
         WebUtils.retryIfAuthFailedExecute {
-            loginService.getManagerCookie()
+            billingLoginService.getManagerCookie()
                 .flatMap {
                     doRequest(
                         method = BillingMethod.GET_ACCOUNT,
                         cookie = it,
                         request = request,
                         responseClazz = GetAccountResponse::class.java
+                    )
+                }
+        }.map { unwrapData(it) }
+
+    /**
+     * Получает инфу из базы знаний.
+     */
+    fun getSbssKnowledge(request: GetSbssKnowledgeRequest): Mono<GetSbssKnowledgeResponse> =
+        WebUtils.retryIfAuthFailedExecute {
+            billingLoginService.getManagerCookie()
+                .flatMap {
+                    doRequest(
+                        method = BillingMethod.GET_SBSS_KNOWLEDGE,
+                        cookie = it,
+                        request = request,
+                        responseClazz = GetSbssKnowledgeResponse::class.java
                     )
                 }
         }.map { unwrapData(it) }

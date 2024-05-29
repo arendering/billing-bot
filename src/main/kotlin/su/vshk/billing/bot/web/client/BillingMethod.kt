@@ -9,5 +9,6 @@ class BillingMethod private constructor() {
         const val GET_ACCOUNT = "getAccount"
         const val CLIENT_PROMISE_PAYMENT = "ClientPromisePayment"
         const val GET_RECOMMENDED_PAYMENT = "getRecommendedPayment"
+        const val GET_SBSS_KNOWLEDGE = "getSbssKnowledge"
     }
 }

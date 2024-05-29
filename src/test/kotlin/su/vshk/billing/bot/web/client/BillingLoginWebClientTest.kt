@@ -87,7 +87,7 @@ class BillingLoginWebClientTest {
         mockClientConvertResponse(
             ClientLoginResponse(
                 ret = ClientLoginRet(
-                    uid = 1917L
+                    userId = 1917L
                 )
             )
         )
@@ -100,7 +100,7 @@ class BillingLoginWebClientTest {
             .expectNextMatches {
                 assertThat(it.isPresent).isTrue
                 val clientCookie = it.get()
-                assertThat(clientCookie.uid).isEqualTo(1917L)
+                assertThat(clientCookie.userId).isEqualTo(1917L)
                 assertThat(clientCookie.cookie.value).isEqualTo("1234abcd")
 
                 true
@@ -144,7 +144,7 @@ class BillingLoginWebClientTest {
         mockClientConvertResponse(
             ClientLoginResponse(
                 ret = ClientLoginRet(
-                    uid = 1917L
+                    userId = 1917L
                 )
             )
         )

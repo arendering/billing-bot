@@ -2,7 +2,6 @@ package su.vshk.billing.bot
 
 import com.nhaarman.mockitokotlin2.*
 import org.assertj.core.api.Assertions.assertThat
-import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dao.repository.UserRepository
 import su.vshk.billing.bot.web.client.BillingWebClient
 import su.vshk.billing.bot.web.dto.BillingResponseItem
@@ -25,13 +24,13 @@ import org.telegram.telegrambots.meta.api.objects.Update
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.config.BotProperties
-import su.vshk.billing.bot.dao.model.Command
-import su.vshk.billing.bot.dao.model.GenericCommand
-import su.vshk.billing.bot.dao.model.PaymentNotificationMessageEntity
+import su.vshk.billing.bot.dao.model.*
 import su.vshk.billing.bot.dao.repository.PaymentNotificationMessageRepository
+import su.vshk.billing.bot.dao.repository.PaymentNotificationRepository
 import su.vshk.billing.bot.dialog.option.*
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
-import su.vshk.billing.bot.service.LoginMessageService
+import su.vshk.billing.bot.service.LoginMessageIdService
+import su.vshk.billing.bot.util.getLogger
 import su.vshk.billing.bot.web.dto.manager.*
 import java.math.BigDecimal
 import java.util.*
@@ -49,7 +48,10 @@ class BotTest {
     private lateinit var paymentNotificationMessageRepository: PaymentNotificationMessageRepository
 
     @Autowired
-    private lateinit var loginMessageService: LoginMessageService
+    private lateinit var paymentNotificationRepository: PaymentNotificationRepository
+
+    @Autowired
+    private lateinit var loginMessageIdService: LoginMessageIdService
 
     @Autowired
     private lateinit var properties: BotProperties
@@ -60,6 +62,7 @@ class BotTest {
     @MockBean
     private lateinit var billingWebClient: BillingWebClient
 
+    private val logger = getLogger()
     private val telegramId = 42L
     private val buttonRequestMessageId = 1
 
@@ -67,6 +70,7 @@ class BotTest {
     fun setUp() {
         userRepository.deleteAll()
         paymentNotificationMessageRepository.deleteAll()
+        paymentNotificationRepository.deleteAll()
     }
 
     @ParameterizedTest
@@ -86,11 +90,11 @@ class BotTest {
         doReturn(Mono.empty<Unit>())
             .whenever(bot).deleteMessages(deleteMessageChatIdCaptor.capture(), deleteMessageIdsCaptor.capture())
 
-        val uid = 13L
-        mockGetClientId(uid)
+        val userId = 13L
+        mockGetClientId(userId)
 
-        val agrmId = 999L
-        mockGetVgroups(agrmId = agrmId)
+        val agreementId = 999L
+        mockGetVgroups(agreementId = agreementId)
 
         sendText(data = command, requestMessageId = 10)
         sendText(data = "user", requestMessageId = 20)
@@ -117,7 +121,7 @@ class BotTest {
 
         verify(billingWebClient).getVgroups(
             argThat {
-                assertThat(this.flt?.userId).isEqualTo(uid)
+                assertThat(this.filter?.userId).isEqualTo(userId)
                 true
             }
         )
@@ -127,14 +131,13 @@ class BotTest {
             it[0]
         }
         assertThat(user.telegramId).isEqualTo(telegramId)
-        assertThat(user.uid).isEqualTo(uid)
+        assertThat(user.userId).isEqualTo(userId)
         assertThat(user.login).isEqualTo("user")
-        assertThat(user.password).isEqualTo("1234")
-        assertThat(user.agrmId).isEqualTo(agrmId)
+        assertThat(user.agreementId).isEqualTo(agreementId)
 
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
 
-        assertThat(loginMessageService.isEmpty(user.telegramId)).isTrue
+        assertThat(loginMessageIdService.isEmpty(user.telegramId)).isTrue
     }
 
     @Test
@@ -155,7 +158,7 @@ class BotTest {
 
         mockGetClientId(null)
 
-        sendText(data = Command.START.value, requestMessageId = 10)
+        sendText(data = Command.LOGIN.value, requestMessageId = 10)
         sendText(data = "user", requestMessageId = 20)
         sendText(data = "1234", requestMessageId = 30)
 
@@ -179,7 +182,7 @@ class BotTest {
         )
         assertThat(userRepository.findAll()).isEmpty()
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
-        assertThat(loginMessageService.isEmpty(telegramId)).isTrue
+        assertThat(loginMessageIdService.isEmpty(telegramId)).isTrue
     }
 
     @Test
@@ -198,8 +201,12 @@ class BotTest {
         assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(10)
     }
 
+    /*
+    Зарегистрированный пользователь ввел текст "/start".
+    Нужно отправить ему еще раз сообщение с меню, т.к он мог удалить предыдущее сообщение с меню.
+     */
     @Test
-    fun testSendMenuIfRegisteredUserSendStartAsText() {
+    fun testRepeatMenuIfRegisteredUserSendStartAsText() {
         preSaveUser()
 
         val sendMessageChatIdCaptor = argumentCaptor<Long>()
@@ -214,13 +221,61 @@ class BotTest {
         doReturn(Mono.empty<Unit>())
             .whenever(bot).deleteMessages(deleteMessageChatIdCaptor.capture(), deleteMessageIdsCaptor.capture())
 
-        sendText(data = Command.START.value, requestMessageId = 10)
+        sendText(data = Command.LOGIN.value, requestMessageId = 10)
 
         assertThat(sendMessageChatIdCaptor.allValues).containsExactly(telegramId)
         sendMessageResponseContentCaptor.allValues.map { it.text }.let { messages ->
             assertThat(messages.size).isEqualTo(1)
             assertThat(messages[0]).contains("Главное меню")
         }
+
+        assertThat(deleteMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
+        assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(10)
+    }
+
+    /*
+    Пользователь, находясь в диалоге, ввел текст "/start".
+    Нужно отправить ему еще раз предыдущее сообщение, которое было в диалоге, т.к он мог его удалить.
+     */
+    @Test
+    fun testRepeatMenuIfDialogUserSendStartAsText() {
+        val editMessageChatIdCaptor = argumentCaptor<Long>()
+        val editMessageMessageIdCaptor = argumentCaptor<Int>()
+        val editMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
+
+        doReturn(Mono.empty<Unit>())
+            .doReturn(Mono.empty<Unit>())
+            .whenever(bot).editMessage(editMessageChatIdCaptor.capture(), editMessageMessageIdCaptor.capture(), editMessageResponseContentCaptor.capture())
+
+        val sendMessageChatIdCaptor = argumentCaptor<Long>()
+        val sendMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
+
+        doReturn(Message().also { it.messageId = 11 }.toMono())
+            .whenever(bot).sendMessage(sendMessageChatIdCaptor.capture(), sendMessageResponseContentCaptor.capture())
+
+        val deleteMessageChatIdCaptor = argumentCaptor<Long>()
+        val deleteMessageIdsCaptor = argumentCaptor<List<Int>>()
+
+        doReturn(Mono.empty<Unit>())
+            .whenever(bot).deleteMessages(deleteMessageChatIdCaptor.capture(), deleteMessageIdsCaptor.capture())
+
+        preSaveUser()
+        mockGetPaymentsEmpty()
+
+        pushButton(Command.PAYMENT_HISTORY.value)
+        sendText(data = Command.LOGIN.value, requestMessageId = 10)
+        pushButton(PaymentHistoryAvailableOptions.PERIOD_ONE_MONTH)
+
+        assertThat(editMessageChatIdCaptor.allValues).containsExactly(telegramId, telegramId)
+        assertThat(editMessageMessageIdCaptor.allValues).containsExactly(buttonRequestMessageId, buttonRequestMessageId)
+        editMessageResponseContentCaptor.allValues.map { it.text }.let { messages ->
+            assertThat(messages.size).isEqualTo(2)
+            assertThat(messages[0]).contains("За какой период времени Вы хотите увидеть список платежей ?")
+            assertThat(messages[1]).contains("Платежи с", "Нет данных.")
+        }
+
+        assertThat(sendMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
+        assertThat(sendMessageResponseContentCaptor.firstValue.text).contains("За какой период времени Вы хотите увидеть список платежей ?")
 
         assertThat(deleteMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
         assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(10)
@@ -245,7 +300,7 @@ class BotTest {
 
         mockGetClientIdError()
 
-        sendText(data = Command.START.value, requestMessageId = 10)
+        sendText(data = Command.LOGIN.value, requestMessageId = 10)
         sendText(data = "user", requestMessageId = 20)
         sendText(data = "1234", requestMessageId = 30)
 
@@ -263,7 +318,7 @@ class BotTest {
 
         assertThat(userRepository.findAll()).isEmpty()
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
-        assertThat(loginMessageService.isEmpty(telegramId)).isTrue
+        assertThat(loginMessageIdService.isEmpty(telegramId)).isTrue
     }
 
     @Test
@@ -284,7 +339,7 @@ class BotTest {
         preSaveUser()
         mockGetVgroupsError()
 
-        pushButton(Command.INFO.value)
+        pushButton(Command.AGREEMENTS.value)
 
         assertThat(sendMessageChatIdCaptor.firstValue).isEqualTo(properties.errorGroupNotification.chatId)
         assertThat(sendMessageResponseContentCaptor.firstValue.text).contains("Код ошибки:")
@@ -294,11 +349,12 @@ class BotTest {
         assertThat(editMessageResponseContentCaptor.firstValue.text).contains("К сожалению, на данный момент функция недоступна")
     }
 
+    /*
+    Может произойти, если бот перезагрузился, а пользователь был в диалоге.
+    Тогда пользователь введет опцию с кнопки, а бот ожидает ввода команды.
+     */
     @Test
     fun testUnexpectedCommandInput() {
-        // Может произойти, если бот перезагрузился, а пользователь был в диалоге.
-        // Тогда пользователь введет опцию с кнопки, а бот ожидает ввода команды.
-
         val editMessageChatIdCaptor = argumentCaptor<Long>()
         val editMessageMessageIdCaptor = argumentCaptor<Int>()
         val editMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
@@ -369,9 +425,9 @@ class BotTest {
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
     }
 
-    /**
-     * Пользователь успешно выходит из бота.
-     * При этом у него в чате есть напоминание об оплате, которое тоже будет удалено.
+    /*
+    Пользователь успешно выходит из бота.
+    При этом у него в чате есть напоминание об оплате, которое тоже будет удалено.
      */
     @Test
     fun testExitAndDeletePaymentNotification() {
@@ -413,72 +469,126 @@ class BotTest {
     }
 
     @Test
-    fun testInfo() {
+    fun testAgreements() {
         val editMessageChatIdCaptor = argumentCaptor<Long>()
         val editMessageMessageIdCaptor = argumentCaptor<Int>()
         val editMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
 
         doReturn(Mono.empty<Unit>())
+            .doReturn(Mono.empty<Unit>())
+            .doReturn(Mono.empty<Unit>())
             .whenever(bot).editMessage(editMessageChatIdCaptor.capture(), editMessageMessageIdCaptor.capture(), editMessageResponseContentCaptor.capture())
 
         preSaveUser()
-        mockGetVgroups(username = "Иванов И.И", agrmnum = "1917-000", balance = BigDecimal("3000.23"))
+        mockGetVgroups(
+            GetVgroupsResponse(
+                ret = listOf(
+                    GetVgroupsRet(
+                        username = "Иван Иванов",
+                        agreementId = 999,
+                        agreementNumber = "Int-1111/11",
+                        balance = BigDecimal("100"),
+                        agentDescription = "Netflow",
+                        addresses = listOf(
+                            GetVgroupsAddress(
+                                address = "Россия,обл Московская,р-н Щелковский,,,кв-л Лесной,дом 8,,,,141181"
+                            )
+                        ),
+                        blocked = 1
+                    ),
+                    GetVgroupsRet(
+                        username = "Иван Иванов",
+                        agreementId = 998,
+                        agreementNumber = "Int-2222/22",
+                        balance = BigDecimal("100"),
+                        agentDescription = "Netflow",
+                        addresses = listOf(
+                            GetVgroupsAddress(
+                                address = "Россия,обл Московская,р-н Щелковский,,,кв-л Лесной,дом 9,,,,141181"
+                            )
+                        )
+                    )
+                )
+            )
+        )
 
         val recommendedPaymentCaptor = mockGetRecommendedPayment(
-            recommendedPayment = BigDecimal("300"),
-            recommendedPaymentAndBalanceDiff = BigDecimal("500")
+            defaultRecommendedPayment = BigDecimal("150"),
+            actualRecommendedPayment = BigDecimal("50")
         )
 
-        mockGetAccount(
-            promiseCredit = BigDecimal("1500.15"),
-            email = "foobar@mail.ru"
-        )
+        mockGetAccount()
 
-        pushButton(Command.INFO.value)
+        pushButton(Command.AGREEMENTS.value)
+        pushButton(AgreementAvailableOptions.SWITCH_AGREEMENT)
+        pushButton("998")
 
-        assertThat(editMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
-        assertThat(editMessageMessageIdCaptor.firstValue).isEqualTo(buttonRequestMessageId)
-        assertThat(
-            editMessageResponseContentCaptor.firstValue.text
-        ).contains(
-            "ФИО",
-            "Иванов И.И",
-            "Номер договора",
-            "1917-00",
-            "Баланс",
-            "3 000.23 ₽",
-            "Ежемесячный платеж",
-            "300 ₽",
-            "Рекомендуется внести",
-            "500 ₽",
-            "Подключен обещанный платеж",
-            "1 500.15 ₽",
-            "E-mail",
-            "foobar@mail.ru"
-        )
+
+        assertThat(editMessageChatIdCaptor.allValues).containsExactly(telegramId, telegramId, telegramId)
+        assertThat(editMessageMessageIdCaptor.allValues).containsExactly(buttonRequestMessageId, buttonRequestMessageId, buttonRequestMessageId)
+        editMessageResponseContentCaptor.allValues.map { it.text }.let { messages ->
+            assertThat(messages.size).isEqualTo(3)
+            assertThat(messages[0]).contains(
+                "ФИО",
+                "Иван Иванов",
+                "Номер договора",
+                "Int-1111/11",
+                "Статус интернета",
+                "УЗ заблокирована по балансу",
+                "Баланс",
+                "100 ₽",
+                "Ежемесячный платеж",
+                "150 ₽",
+                "Рекомендуется внести",
+                "50 ₽",
+                "E-mail",
+                "Не указан"
+            )
+
+            assertThat(messages[1]).contains(
+                "Выберите договор, с которым будет производиться дальнейшее взаимодействие",
+                "Ваши договоры:",
+                "Int-1111/11",
+                "р-н Щелковский, кв-л Лесной, дом 8",
+                "Int-2222/22",
+                "р-н Щелковский, кв-л Лесной, дом 9"
+            )
+
+            assertThat(messages[2]).contains(
+                "Вами был выбран договор",
+                "Int-2222/22",
+                "по адресу",
+                "р-н Щелковский, кв-л Лесной, дом 9"
+            )
+        }
 
         verify(billingWebClient).getVgroups(
             argThat {
-                assertThat(this.flt?.userId).isEqualTo(13L)
+                assertThat(this.filter?.userId).isEqualTo(13L)
                 true
             }
         )
 
         recommendedPaymentCaptor.allValues.let { requests ->
             assertThat(requests.size).isEqualTo(2)
-            assertThat(requests[0].agrmId).isEqualTo(999L)
+            assertThat(requests[0].agreementId).isEqualTo(999L)
             assertThat(requests[0].mode).isEqualTo(0L)
 
-            assertThat(requests[1].agrmId).isEqualTo(999L)
+            assertThat(requests[1].agreementId).isEqualTo(999L)
             assertThat(requests[1].mode).isEqualTo(1L)
         }
 
         verify(billingWebClient).getAccount(
             argThat {
-                assertThat(this.uid).isEqualTo(13L)
+                assertThat(this.userId).isEqualTo(13L)
                 true
             }
         )
+
+        userRepository.findById(telegramId).orElse(null).let { u ->
+            assertThat(u).isNotNull
+            assertThat(u.agreementId).isEqualTo(998)
+        }
     }
 
     @Test
@@ -509,7 +619,7 @@ class BotTest {
     }
 
     @Test
-    fun testPayments() {
+    fun testPaymentHistory() {
         val editMessageChatIdCaptor = argumentCaptor<Long>()
         val editMessageMessageIdCaptor = argumentCaptor<Int>()
         val editMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
@@ -521,8 +631,8 @@ class BotTest {
         preSaveUser()
         mockGetPaymentsEmpty()
 
-        pushButton(Command.PAYMENTS.value)
-        pushButton(PaymentsAvailableOptions.PERIOD_ONE_MONTH)
+        pushButton(Command.PAYMENT_HISTORY.value)
+        pushButton(PaymentHistoryAvailableOptions.PERIOD_ONE_MONTH)
 
         assertThat(editMessageChatIdCaptor.allValues).containsExactly(telegramId, telegramId)
         assertThat(editMessageMessageIdCaptor.allValues).containsExactly(buttonRequestMessageId, buttonRequestMessageId)
@@ -534,8 +644,8 @@ class BotTest {
 
         verify(billingWebClient).getPayments(
             argThat {
-                val flt = this.flt!!
-                assertThat(flt.agrmId).isEqualTo(999L)
+                val flt = this.filter!!
+                assertThat(flt.agreementId).isEqualTo(999L)
                 assertThat(flt.dateFrom).isNotNull
                 assertThat(flt.dateTo).isNotNull
                 true
@@ -574,7 +684,7 @@ class BotTest {
         verify(billingWebClient).getRecommendedPayment(
             argThat {
                 assertThat(mode).isEqualTo(1L)
-                assertThat(agrmId).isEqualTo(999L)
+                assertThat(agreementId).isEqualTo(999L)
                 true
             }
         )
@@ -582,14 +692,13 @@ class BotTest {
         verify(billingWebClient).clientPromisePayment(
             argThat {
                 assertThat(this.telegramId).isEqualTo(user.telegramId)
-                assertThat(this.uid).isEqualTo(user.uid)
+                assertThat(this.userId).isEqualTo(user.userId)
                 assertThat(this.login).isEqualTo(user.login)
-                assertThat(this.password).isEqualTo(user.password)
-                assertThat(this.agrmId).isEqualTo(user.agrmId)
+                assertThat(this.agreementId).isEqualTo(user.agreementId)
                 true
             },
             argThat {
-                assertThat(this.agrmId).isEqualTo(999L)
+                assertThat(this.agreementId).isEqualTo(999L)
                 assertThat(this.amount).isEqualTo(1000)
                 true
             }
@@ -607,11 +716,50 @@ class BotTest {
 
         preSaveUser()
         mockGetVgroups(
-            tariffs = listOf(
-                "Услуги",
-                "ТВ - Смотрешка \"Пакет Эксклюзив\"",
-                "ФЛ - МКД - Начальный (MX)",
-                "ТВ - 24 часа ТВ  (Отключен)"
+            GetVgroupsResponse(
+                ret = listOf(
+                    GetVgroupsRet(
+                        agreementId = 999,
+                        tariffId = 10
+                    ),
+                    GetVgroupsRet(
+                        agreementId = 999,
+                        tariffId = 11
+                    ),
+                    GetVgroupsRet(
+                        agreementId = 999,
+                        tariffId = 12,
+                        tariffDescription = "ТВ - (Архив) Смотрешка 25 за 25"
+                    ),
+                    GetVgroupsRet(
+                        agreementId = 999,
+                        tariffId = 13
+                    )
+                )
+            )
+        )
+
+        mockGetSbssKnowledge(
+            GetSbssKnowledgeResponse(
+                ret = GetSbssKnowledgeRet(
+                    posts = listOf(
+                        GetSbssKnowledgePostFull(
+                            post = GetSbssKnowledgePost(
+                                text = "tarid: 10, type: internet, name: Свои, speed: 1Gbit/s, rent: 100р/мес, client: физическое лицо."
+                            )
+                        ),
+                        GetSbssKnowledgePostFull(
+                            post = GetSbssKnowledgePost(
+                                text = "tarid: 11, type: tv, name: 24ТВ \"Лайт +\", channels: 241 канал, rent: 199р/мес."
+                            )
+                        ),
+                        GetSbssKnowledgePostFull(
+                            post = GetSbssKnowledgePost(
+                                text = "tarid: 13, type: internet-tv, name: Мега+ТВ, speed: 500Mbit/s, channels: 144 канала, rent: 1200р/мес."
+                            )
+                        )
+                    )
+                )
             )
         )
 
@@ -620,13 +768,18 @@ class BotTest {
         assertThat(editMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
         assertThat(editMessageMessageIdCaptor.firstValue).isEqualTo(buttonRequestMessageId)
         editMessageResponseContentCaptor.firstValue.text.let { text ->
-            assertThat(text).contains("Смотрешка \"Пакет Эксклюзив\"", "Начальный")
-            assertThat(text).doesNotContain("Услуги", "ТВ - 24 часа ТВ  (Отключен)")
+            logger.info("Response message: $text")
+            assertThat(text).contains(
+                "Интернет:", "Тариф", "Свои", "Скорость", "1Gbit/s", "Стоимость", "100р/мес",
+                "Онлайн ТВ:", "Тариф", "24ТВ \"Лайт +\"", "Каналов", "241", "Стоимость", "199р/мес.", "(Архив) Смотрешка 25 за 25",
+                "Комбо (Интернет + ТВ)", "Тариф", "Мега+ТВ", "Скорость", "500Mbit/s", "Каналов", "144", "Стоимость", "1200р/мес.",
+                "Вы используете архивные тарифные опции! Рекомендуем перейти на более выгодные и актуальные тарифы"
+            )
         }
     }
 
     @Test
-    fun testTurnOnNotification() {
+    fun testEnableNotificationForAllAgreements() {
         val editMessageChatIdCaptor = argumentCaptor<Long>()
         val editMessageMessageIdCaptor = argumentCaptor<Int>()
         val editMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
@@ -636,9 +789,17 @@ class BotTest {
             .whenever(bot).editMessage(editMessageChatIdCaptor.capture(), editMessageMessageIdCaptor.capture(), editMessageResponseContentCaptor.capture())
 
         preSaveUser()
+        mockGetVgroups(
+            GetVgroupsResponse(
+                ret = listOf(
+                    GetVgroupsRet(agreementId = 999, agentDescription = "Netflow"),
+                    GetVgroupsRet(agreementId = 888, agentDescription = "Netflow")
+                )
+            )
+        )
 
         pushButton(Command.NOTIFICATION.value)
-        pushButton(NotificationAvailableOptions.TURN_ON)
+        pushButton(NotificationAvailableOptions.ENABLE_FOR_ALL_AGREEMENTS)
 
         assertThat(editMessageChatIdCaptor.allValues).containsExactly(telegramId, telegramId)
         assertThat(editMessageMessageIdCaptor.allValues).containsExactly(buttonRequestMessageId, buttonRequestMessageId)
@@ -647,18 +808,23 @@ class BotTest {
             assertThat(
                 messages[0]
             ).contains(
-                "На данный момент у Вас",
-                "отключены",
-                "напоминания об оплате",
-                "Хотите",
-                "включить"
+                "На данный момент у Вас отключены оповещения об окончании ежемесячного расчетного периода.",
+                "Выберите подходящий вариант:",
+                "Подключить оповещения для текущего договора",
+                "Подключить оповещения для всех Ваших договоров"
             )
-            assertThat(messages[1]).contains("Напоминания об оплате включены")
+            assertThat(
+                messages[1]
+            ).contains(
+                "Оповещения по всем договорам в нашей сети успешно подключены.",
+                "Оповещения, касаемо каждого договора отдельно, не поступят в случае достаточной суммы средств на Вашем балансе"
+            )
         }
 
-        assertThat(
-            userRepository.findById(telegramId).get().paymentNotificationEnabled
-        ).isTrue
+        paymentNotificationRepository.findById(telegramId).let { entityOpt ->
+            assertThat(entityOpt.isPresent).isTrue()
+            assertThat(entityOpt.get().notificationType).isEqualTo(PaymentNotificationType.ALL)
+        }
     }
 
     @Test
@@ -718,9 +884,9 @@ class BotTest {
         preSavePaymentNotificationMessage(buttonRequestMessageId)
         mockGetPaymentsEmpty()
 
-        pushButton(Command.PAYMENTS.value)
+        pushButton(Command.PAYMENT_HISTORY.value)
         pushButton(GenericCommand.DELETE_PAYMENT_NOTIFICATION)
-        pushButton(PaymentsAvailableOptions.PERIOD_ONE_MONTH)
+        pushButton(PaymentHistoryAvailableOptions.PERIOD_ONE_MONTH)
 
         assertThat(deleteMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
         assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(buttonRequestMessageId)
@@ -735,8 +901,8 @@ class BotTest {
 
         verify(billingWebClient).getPayments(
             argThat {
-                val flt = this.flt!!
-                assertThat(flt.agrmId).isEqualTo(999L)
+                val flt = this.filter!!
+                assertThat(flt.agreementId).isEqualTo(999L)
                 assertThat(flt.dateFrom).isNotNull
                 assertThat(flt.dateTo).isNotNull
                 true
@@ -749,11 +915,9 @@ class BotTest {
     private fun preSaveUser(): UserEntity =
         UserEntity(
             telegramId = telegramId,
-            uid = 13L,
+            userId = 13L,
             login = "user",
-            password = "1234",
-            agrmId = 999L,
-            paymentNotificationEnabled = false
+            agreementId = 999L
         ).let { userRepository.save(it) }
 
     private fun preSavePaymentNotificationMessage(paymentNotificationMessageId: Int = 0) =
@@ -809,11 +973,11 @@ class BotTest {
             .also { it.callbackQuery = callbackQuery }
     }
 
-    private fun mockGetClientId(uid: Long?) {
+    private fun mockGetClientId(userId: Long?) {
         whenever(
             billingWebClient.getClientId(any())
         ).thenReturn(
-            Optional.ofNullable(uid).toMono()
+            Optional.ofNullable(userId).toMono()
         )
     }
 
@@ -825,10 +989,18 @@ class BotTest {
         )
     }
 
+    private fun mockGetVgroups(response: GetVgroupsResponse) {
+        whenever(
+            billingWebClient.getVgroups(any())
+        ).thenReturn(
+            response.toMono()
+        )
+    }
+
     private fun mockGetVgroups(
         username: String? = null,
-        agrmnum: String? = null,
-        agrmId: Long? = null,
+        agreementNumber: String? = null,
+        agreementId: Long? = null,
         balance: BigDecimal? = null
     ) {
         whenever(
@@ -838,22 +1010,21 @@ class BotTest {
                 ret = listOf(
                     GetVgroupsRet(
                         username = username,
-                        agrmNum = agrmnum,
-                        agrmId = agrmId,
-                        balance = balance
+                        agreementNumber = agreementNumber,
+                        agreementId = agreementId,
+                        balance = balance,
+                        agentDescription = "Netflow",
                     )
                 )
             ).toMono()
         )
     }
 
-    private fun mockGetVgroups(tariffs: List<String>) {
+    private fun mockGetSbssKnowledge(response: GetSbssKnowledgeResponse) {
         whenever(
-            billingWebClient.getVgroups(any())
+            billingWebClient.getSbssKnowledge(any())
         ).thenReturn(
-            tariffs
-                .map { GetVgroupsRet(tariffDescription = it) }
-                .let { GetVgroupsResponse(ret = it).toMono() }
+            response.toMono()
         )
     }
 
@@ -869,26 +1040,26 @@ class BotTest {
         whenever(
             billingWebClient.getRecommendedPayment(any())
         ).thenReturn(
-            GetRecommendedPaymentResponse(ret = recommendedPayment).toMono()
+            GetRecommendedPaymentResponse(amount = recommendedPayment).toMono()
         )
     }
 
     private fun mockGetRecommendedPayment(
-        recommendedPayment: BigDecimal,
-        recommendedPaymentAndBalanceDiff: BigDecimal
+        defaultRecommendedPayment: BigDecimal,
+        actualRecommendedPayment: BigDecimal
     ): KArgumentCaptor<GetRecommendedPaymentRequest> {
         val captor = argumentCaptor<GetRecommendedPaymentRequest>()
         whenever(
             billingWebClient.getRecommendedPayment(captor.capture())
         ).thenReturn(
-            GetRecommendedPaymentResponse(ret = recommendedPayment).toMono()
+            GetRecommendedPaymentResponse(amount = defaultRecommendedPayment).toMono()
         ).thenReturn(
-            GetRecommendedPaymentResponse(ret = recommendedPaymentAndBalanceDiff).toMono()
+            GetRecommendedPaymentResponse(amount = actualRecommendedPayment).toMono()
         )
         return captor
     }
 
-    private fun mockGetAccount(promiseCredit: BigDecimal, email: String) {
+    private fun mockGetAccount(promiseCredit: BigDecimal? = null, email: String? = null) {
         whenever(
             billingWebClient.getAccount(any())
         ).thenReturn(

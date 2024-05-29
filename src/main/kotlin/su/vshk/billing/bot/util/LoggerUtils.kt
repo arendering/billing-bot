@@ -15,8 +15,8 @@ inline fun <reified C : Any> C.getLogger(): Logger =
 val ContextView.traceId: String get() =
     this[TRACE_ID_KEY]
 
-fun <T> Mono<T>.putTraceId(): Mono<T> =
-    this.contextWrite { it.put(TRACE_ID_KEY, UUID.randomUUID().toString()) }
+fun <T> Mono<T>.putTraceId(traceId: String? = null): Mono<T> =
+    this.contextWrite { it.put(TRACE_ID_KEY, traceId ?: UUID.randomUUID().toString()) }
 
 fun <T> Flux<T>.putTraceId(): Flux<T> =
     this.contextWrite { it.put(TRACE_ID_KEY, UUID.randomUUID().toString()) }

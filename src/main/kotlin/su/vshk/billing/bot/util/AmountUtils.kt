@@ -21,18 +21,27 @@ class AmountUtils private constructor() {
             DecimalFormat("#,##0.00", defaultFormatSymbols)
         }
 
-        fun formatAmount(amount: BigDecimal, splitByThousands: Boolean = true): String {
+        fun formatAmount(
+            amount: BigDecimal,
+            splitByThousands: Boolean = true,
+            currencyChar: Char? = '₽'
+        ): String =
             //TODO: тут не нужно округлять, все BigDecimal в коде уже округлены
-            val rounded = amount.setScale(2, RoundingMode.UP)
-
-            return if (splitByThousands) {
-                amountDisplayValueFormatter.get().format(rounded)
-            } else {
-                amountValueFormatter.get().format(rounded)
-            }.run {
-                this.replace("""\.00$""".toRegex(), "")
-            }
-        }
+            amount.setScale(2, RoundingMode.UP)
+                .let { rounded ->
+                    if (splitByThousands) {
+                        amountDisplayValueFormatter.get().format(rounded)
+                    } else {
+                        amountValueFormatter.get().format(rounded)
+                    }.run {
+                        this.replace("""\.00$""".toRegex(), "")
+                    }
+                }
+                .let { formatted ->
+                    currencyChar
+                        ?.let { c -> "$formatted $c" }
+                        ?: formatted
+                }
 
         /**
          * Округляет до целого.

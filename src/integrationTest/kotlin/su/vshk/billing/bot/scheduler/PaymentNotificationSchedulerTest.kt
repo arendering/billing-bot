@@ -19,8 +19,11 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.config.BotProperties
+import su.vshk.billing.bot.dao.model.PaymentNotificationEntity
 import su.vshk.billing.bot.dao.model.PaymentNotificationMessageEntity
+import su.vshk.billing.bot.dao.model.PaymentNotificationType
 import su.vshk.billing.bot.dao.repository.PaymentNotificationMessageRepository
+import su.vshk.billing.bot.dao.repository.PaymentNotificationRepository
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.web.dto.manager.*
 import java.math.BigDecimal
@@ -29,10 +32,13 @@ import java.math.BigDecimal
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-class PaymentSchedulerTest {
+class PaymentNotificationSchedulerTest {
 
     @Autowired
     private lateinit var userRepository: UserRepository
+
+    @Autowired
+    private lateinit var paymentNotificationRepository: PaymentNotificationRepository
 
     @Autowired
     private lateinit var paymentNotificationMessageRepository: PaymentNotificationMessageRepository
@@ -52,6 +58,7 @@ class PaymentSchedulerTest {
     @BeforeEach
     fun setUp() {
         userRepository.deleteAll()
+        paymentNotificationRepository.deleteAll()
         paymentNotificationMessageRepository.deleteAll()
     }
 
@@ -65,26 +72,28 @@ class PaymentSchedulerTest {
             .whenever(bot).sendMessage(sendMessageChatIdCaptor.capture(), sendMessageResponseContentCaptor.capture())
 
         preSaveUsers()
-        val (balanceCaptor, recommendedPaymentCaptor) = mockGetBalanceAndRecommendedPayment()
+        val (vgroupsCaptor, recommendedPaymentCaptor) = mockGetVgroupsAndRecommendedPayment()
 
         paymentScheduler.sendOneDayPaymentNotification()
         Thread.sleep(10_000L)
 
-        balanceCaptor.allValues.let { args ->
+        vgroupsCaptor.allValues.let { args ->
             assertThat(args.size).isEqualTo(3)
-            assertThat(args[0].flt?.userId).isEqualTo(10L)
-            assertThat(args[1].flt?.userId).isEqualTo(20L)
-            assertThat(args[2].flt?.userId).isEqualTo(30L)
+            assertThat(args[0].filter?.userId).isEqualTo(10L)
+            assertThat(args[1].filter?.userId).isEqualTo(20L)
+            assertThat(args[2].filter?.userId).isEqualTo(30L)
         }
 
         recommendedPaymentCaptor.allValues.let { args ->
-            assertThat(args.size).isEqualTo(3)
-            assertThat(args[0].agrmId).isEqualTo(10L)
+            assertThat(args.size).isEqualTo(4)
+            assertThat(args[0].agreementId).isEqualTo(10L)
             assertThat(args[0].mode).isEqualTo(1L)
-            assertThat(args[1].agrmId).isEqualTo(20L)
+            assertThat(args[1].agreementId).isEqualTo(20L)
             assertThat(args[1].mode).isEqualTo(1L)
-            assertThat(args[2].agrmId).isEqualTo(30L)
+            assertThat(args[2].agreementId).isEqualTo(21L)
             assertThat(args[2].mode).isEqualTo(1L)
+            assertThat(args[3].agreementId).isEqualTo(30L)
+            assertThat(args[3].mode).isEqualTo(1L)
         }
 
         assertThat(sendMessageChatIdCaptor.allValues).containsExactly(properties.errorGroupNotification.chatId, 2)
@@ -96,10 +105,13 @@ class PaymentSchedulerTest {
             ).contains(
                 "Напоминаем Вам, что до окончания оплаченного периода",
                 "остался 1 день",
-                "Ваш баланс на данный момент",
+                "По адресу:",
+                "кв-л Лесной, дом 8",
                 "200 ₽",
-                "Рекомендуется внести не менее",
-                "2 000 ₽"
+                "2000 ₽",
+                "кв-л Жилой, дом 7",
+                "300 ₽",
+                "3000 ₽",
             )
         }
 
@@ -142,64 +154,116 @@ class PaymentSchedulerTest {
             // будет выкинута ошибка
             UserEntity(
                 telegramId = 1L,
-                uid = 10L,
+                userId = 10L,
                 login = "jack",
-                password = "1234",
-                agrmId = 10L,
-                paymentNotificationEnabled = true
+                agreementId = 10L
             ),
             // отправим напоминание
             UserEntity(
                 telegramId = 2L,
-                uid = 20L,
+                userId = 20L,
                 login = "john",
-                password = "1234",
-                agrmId = 20L,
-                paymentNotificationEnabled = true
+                agreementId = 20L
             ),
             // actualRecommendPayment == 0
             UserEntity(
                 telegramId = 3L,
-                uid = 30L,
+                userId = 30L,
                 login = "jason",
-                password = "1234",
-                agrmId = 30L,
-                paymentNotificationEnabled = true
+                agreementId = 30L
             ),
-            // paymentNotificationEnabled == false
+            // notification disabled
             UserEntity(
                 telegramId = 4L,
-                uid = 40L,
+                userId = 40L,
                 login = "jimbo",
-                password = "1234",
-                agrmId = 40L,
-                paymentNotificationEnabled = false
+                agreementId = 40L
             )
         ).let { userRepository.saveAll(it) }
+
+        listOf(
+            PaymentNotificationEntity(
+                telegramId = 1L,
+                notificationType = PaymentNotificationType.SINGLE
+            ),
+            PaymentNotificationEntity(
+                telegramId = 2L,
+                notificationType = PaymentNotificationType.ALL
+            ),
+            PaymentNotificationEntity(
+                telegramId = 3L,
+                notificationType = PaymentNotificationType.SINGLE
+            )
+        ).let { paymentNotificationRepository.saveAll(it) }
     }
 
-    private fun mockGetBalanceAndRecommendedPayment(): Pair<KArgumentCaptor<GetVgroupsRequest>, KArgumentCaptor<GetRecommendedPaymentRequest>> {
-        val balanceCaptor = argumentCaptor<GetVgroupsRequest>()
+    private fun mockGetVgroupsAndRecommendedPayment(): Pair<KArgumentCaptor<GetVgroupsRequest>, KArgumentCaptor<GetRecommendedPaymentRequest>> {
+        val vgroupsCaptor = argumentCaptor<GetVgroupsRequest>()
         val recommendedPaymentCaptor = argumentCaptor<GetRecommendedPaymentRequest>()
 
         whenever(
-            billingWebClient.getVgroups(balanceCaptor.capture())
+            billingWebClient.getVgroups(vgroupsCaptor.capture())
         ).thenReturn(
             GetVgroupsResponse(
                 listOf(
-                    GetVgroupsRet(balance = BigDecimal("100"))
+                    GetVgroupsRet(
+                        balance = BigDecimal("100"),
+                        agentDescription = "Netflow",
+                        username = "",
+                        agreementId = 10L,
+                        agreementNumber = "Int-1111/11",
+                        addresses = listOf(
+                            GetVgroupsAddress(
+                                address = ""
+                            )
+                        )
+                    )
                 )
             ).toMono()
         ).thenReturn(
             GetVgroupsResponse(
                 listOf(
-                    GetVgroupsRet(balance = BigDecimal("200"))
+                    GetVgroupsRet(
+                        balance = BigDecimal("200"),
+                        agentDescription = "Netflow",
+                        username = "",
+                        agreementId = 20L,
+                        agreementNumber = "Int-2222/22",
+                        addresses = listOf(
+                            GetVgroupsAddress(
+                                address = "Россия,обл Московская,р-н Щелковский,,,кв-л Лесной,дом 8,,,,141181"
+                            )
+                        )
+                    ),
+                    GetVgroupsRet(
+                        balance = BigDecimal("300"),
+                        agentDescription = "Netflow",
+                        username = "",
+                        agreementId = 21L,
+                        agreementNumber = "Int-3333/33",
+                        addresses = listOf(
+                            GetVgroupsAddress(
+                                address = "Россия,обл Московская,р-н Щелковский,,,кв-л Жилой,дом 7,,,,141181"
+                            )
+                        )
+                    )
                 )
             ).toMono()
         ).thenReturn(
             GetVgroupsResponse(
                 listOf(
-                    GetVgroupsRet(balance = BigDecimal("300"))
+                    GetVgroupsRet(
+                        balance = BigDecimal("400"),
+                        agentDescription = "Netflow",
+                        username = "",
+                        agreementId = 30L,
+                        agreementNumber = "Int-4444/44",
+                        addresses = listOf(
+                            GetVgroupsAddress(
+                                address = ""
+                            )
+                        )
+                    )
                 )
             ).toMono()
         )
@@ -211,10 +275,12 @@ class PaymentSchedulerTest {
         ).thenReturn(
             GetRecommendedPaymentResponse(BigDecimal("2000")).toMono()
         ).thenReturn(
+            GetRecommendedPaymentResponse(BigDecimal("3000")).toMono()
+        ).thenReturn(
             GetRecommendedPaymentResponse(BigDecimal("0")).toMono()
         )
 
-        return Pair(balanceCaptor, recommendedPaymentCaptor)
+        return Pair(vgroupsCaptor, recommendedPaymentCaptor)
     }
 
     private fun preSavePaymentNotificationMessages() {

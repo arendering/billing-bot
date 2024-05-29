@@ -12,7 +12,6 @@ import reactor.core.publisher.Mono
 import reactor.util.context.ContextView
 import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.util.debugTraceId
-import su.vshk.billing.bot.util.warnTraceId
 import java.time.Duration
 
 abstract class BillingBaseWebClient(

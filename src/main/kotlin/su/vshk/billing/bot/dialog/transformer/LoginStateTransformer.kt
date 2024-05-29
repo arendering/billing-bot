@@ -7,27 +7,27 @@ import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dialog.dto.DialogState
 import su.vshk.billing.bot.dialog.option.LoginOptions
 import su.vshk.billing.bot.dialog.step.LoginStep
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.RequestMessageItem
-import su.vshk.billing.bot.service.LoginMessageService
+import su.vshk.billing.bot.message.response.LoginMessageService
+import su.vshk.billing.bot.service.LoginMessageIdService
 
 @Component
 class LoginStateTransformer(
-    private val responseMessageService: ResponseMessageService,
+    private val loginMessageIdService: LoginMessageIdService,
     private val loginMessageService: LoginMessageService
 ): DialogStateTransformer {
 
     override fun getCommand(): Command =
-        Command.START
+        Command.LOGIN
 
     override fun initializeState(request: RequestMessageItem, user: UserEntity): Mono<DialogState> =
-        loginMessageService.init(request)
+        loginMessageIdService.init(request)
             .map { _ ->
                 DialogState(
                     command = getCommand(),
                     options = LoginOptions(),
                     steps = listOf(LoginStep.LOGIN, LoginStep.PASSWORD),
-                    response = DialogState.Response.next(responseMessageService.startLoginMessage())
+                    response = DialogState.Response.next(loginMessageService.enterLogin())
                 )
             }
 
@@ -38,16 +38,16 @@ class LoginStateTransformer(
 
             when (val step = state.currentStep()) {
                 LoginStep.LOGIN ->
-                    loginMessageService.add(telegramId = request.chatId, messageId = request.messageId)
+                    loginMessageIdService.add(telegramId = request.chatId, messageId = request.messageId)
                         .map { _ ->
                             state.incrementStep(
                                 options = options.copy(login = option),
-                                responseMessageItem = responseMessageService.startPasswordMessage()
+                                responseMessageItem = loginMessageService.enterPassword()
                             )
                         }
 
                 LoginStep.PASSWORD ->
-                    loginMessageService.add(telegramId = request.chatId, messageId = request.messageId)
+                    loginMessageIdService.add(telegramId = request.chatId, messageId = request.messageId)
                         .map { state.finish(options.copy(password = option)) }
 
                 else -> throw IllegalStateException("unknown step: '$step'")

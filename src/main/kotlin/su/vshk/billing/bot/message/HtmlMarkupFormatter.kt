@@ -15,16 +15,22 @@ class HtmlMarkupFormatter {
         private const val SPACE = " "
     }
 
-    fun addValue(
-        header: String,
-        headerType: TextType = TextType.BOLD,
+    /**
+     * Добавляет ключ-значение.
+     *
+     * Пример:
+     * <i>ФИО:</i> <b>Иван Иванов</b>
+     */
+    fun addEntry(
+        key: String,
+        keyType: TextType = TextType.BOLD,
         value: String?,
         valueType: TextType = TextType.ITALIC
     ): HtmlMarkupFormatter =
         value
             ?.let { v ->
                 addBreakLineAvailable = true
-                sb.append(doMarkup("${header}:", headerType))
+                sb.append(doMarkup("${key}:", keyType))
                 sb.append(SPACE)
                 sb.append(doMarkup(v, valueType))
                 sb.append(LINE_SEPARATOR)
@@ -32,9 +38,17 @@ class HtmlMarkupFormatter {
             }
             ?: this
 
-    fun addValues(
-        header: String,
-        headerType: TextType = TextType.BOLD,
+    /**
+     * Добавляет ключ-значения.
+     *
+     * Пример:
+     * <b>Телефоны:</b>
+     * <i>+7-999-111-22-33</i>
+     * <i>+7-888-555-22-33</i>
+     */
+    fun addEntries(
+        key: String,
+        keyType: TextType = TextType.BOLD,
         values: List<String>?,
         valueType: TextType = TextType.ITALIC
     ): HtmlMarkupFormatter =
@@ -42,7 +56,7 @@ class HtmlMarkupFormatter {
             this
         } else {
             addBreakLineAvailable = true
-            sb.append(doMarkup("${header}:", headerType))
+            sb.append(doMarkup("${key}:", keyType))
             values.forEach { v ->
                 sb.append(LINE_SEPARATOR)
                 sb.append(doMarkup(v, valueType))
@@ -51,16 +65,43 @@ class HtmlMarkupFormatter {
             this
         }
 
+    /**
+     * Добавляет текст.
+     *
+     * Пример:
+     * <b>Обещанный платеж выдается сроком на 3 дня</b>
+     */
     fun addText(
-        text: String,
+        text: String?,
         textType: TextType = TextType.PLAIN
-    ): HtmlMarkupFormatter {
-        addBreakLineAvailable = true
-        sb.append(doMarkup(text, textType))
-        sb.append(LINE_SEPARATOR)
-        return this
-    }
+    ): HtmlMarkupFormatter =
+        text
+            ?.let { t ->
+                addBreakLineAvailable = true
+                sb.append(doMarkup(t, textType))
+                sb.append(LINE_SEPARATOR)
+                this
+            }
+            ?: this
 
+    /**
+     * Добавляет ссылку, которая скрыта текстом.
+     */
+    fun addHref(
+        text: String,
+        textType: TextType = TextType.PLAIN,
+        href: String?
+    ): HtmlMarkupFormatter =
+        href
+            ?.let {
+                addBreakLineAvailable = true
+                sb.append(doMarkup(text, textType, href))
+                sb.append(LINE_SEPARATOR)
+                this
+            }
+            ?: this
+
+    //TODO: можно использовать метод ниже
     fun addFormattedText(
         text: String,
         textType: TextType = TextType.PLAIN,
@@ -78,20 +119,49 @@ class HtmlMarkupFormatter {
         return this
     }
 
-    fun addHref(
+    fun addFormattedText(
+        textType: TextType = TextType.PLAIN,
+        text: String,
+        valueType: TextType = TextType.ITALIC,
+        vararg values: String
+    ): HtmlMarkupFormatter {
+        addBreakLineAvailable = true
+        sb.append(
+            doMarkup(
+                text.format(*values.map { v -> doMarkup(v, valueType) }.toTypedArray()),
+                textType
+            )
+        )
+        sb.append(LINE_SEPARATOR)
+        return this
+    }
+
+    fun addFormattedPair(
         text: String,
         textType: TextType = TextType.PLAIN,
-        href: String?
-    ): HtmlMarkupFormatter =
-        href
-            ?.let {
-                addBreakLineAvailable = true
-                sb.append(doMarkup(text, textType, href))
-                sb.append(LINE_SEPARATOR)
-                this
-            }
-            ?: this
+        first: String,
+        firstType: TextType = TextType.ITALIC,
+        second: String,
+        secondType: TextType = TextType.ITALIC
+    ): HtmlMarkupFormatter {
+        addBreakLineAvailable = true
+        sb.append(
+            doMarkup(
+                text.format(
+                    doMarkup(first, firstType),
+                    doMarkup(second, secondType)
+                ),
+                textType
+            )
 
+        )
+        sb.append(LINE_SEPARATOR)
+        return this
+    }
+
+    /**
+     * Добавляет перевод строки.
+     */
     fun addLineBreak(): HtmlMarkupFormatter {
         if (addBreakLineAvailable) {
             sb.append(LINE_SEPARATOR)
@@ -123,7 +193,7 @@ enum class TextType {
     PLAIN, // обычный
     BOLD, // жирный
     ITALIC, // курсив
-    BOLD_UNDERLINED, // жирный подчеркнутый
     PLAIN_UNDERLINED, // обычный подчеркнутый
+    BOLD_UNDERLINED, // жирный подчеркнутый
     BOLD_ITALIC // жирный курсив
 }

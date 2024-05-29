@@ -14,10 +14,10 @@ class Command private constructor(
         private val commands = mutableMapOf<String, Command>()
         private val add: (Command) -> Unit = { commands[it.value] = it }
 
-        val START = Command(value = "/start", isDialog = true)
+        val LOGIN = Command(value = "/start", isDialog = true)
         val MENU = Command(value = "/menu")
-        val INFO = Command(value = "/info")
-        val PAYMENTS = Command(value = "/payments", isDialog = true)
+        val AGREEMENTS = Command(value = "/agreements", isDialog = true)
+        val PAYMENT_HISTORY = Command(value = "/payment_history", isDialog = true)
         val PROMISE_PAYMENT = Command(value = "/promise_payment", isDialog = true)
         val TARIFFS = Command(value = "/tariffs")
         val NOTIFICATION = Command(value = "/notification", isDialog = true)
@@ -25,10 +25,10 @@ class Command private constructor(
         val EXIT = Command(value = "/exit", isDialog = true)
 
         init {
-            add(START)
+            add(LOGIN)
             add(MENU)
-            add(INFO)
-            add(PAYMENTS)
+            add(AGREEMENTS)
+            add(PAYMENT_HISTORY)
             add(PROMISE_PAYMENT)
             add(TARIFFS)
             add(NOTIFICATION)

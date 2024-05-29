@@ -40,11 +40,11 @@ class BillingLoginWebClient(
     fun clientLogin(request: ClientLoginRequest): Mono<Optional<ClientLoginCookie>> =
         doGetCookie(method = BillingMethod.CLIENT_LOGIN, request = request, responseClazz = ClientLoginResponse::class.java)
             .map { (cookie, cookieExpTimestamp, responseItem) ->
-                responseItem.data?.ret?.uid
+                responseItem.data?.ret?.userId
                     ?.let {
                         Optional.of(
                             ClientLoginCookie(
-                                uid = it,
+                                userId = it,
                                 cookie = Cookie(
                                     value = cookie,
                                     expTimestampSeconds = cookieExpTimestamp

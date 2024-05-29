@@ -8,22 +8,29 @@ import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dialog.dto.DialogState
 import su.vshk.billing.bot.dialog.option.PromisePaymentAvailableOptions
 import su.vshk.billing.bot.dialog.option.PromisePaymentOptions
-import su.vshk.billing.bot.dialog.step.PromisePaymentAmountStepData
 import su.vshk.billing.bot.dialog.step.PromisePaymentStep
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.RequestMessageItem
+import su.vshk.billing.bot.message.response.PromisePaymentMessageService
 import su.vshk.billing.bot.service.RecommendedPaymentService
 import su.vshk.billing.bot.util.AmountUtils
+import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class PromisePaymentStateTransformer(
     private val recommendedPaymentService: RecommendedPaymentService,
-    private val responseMessageService: ResponseMessageService
+    private val promisePaymentMessageService: PromisePaymentMessageService
 ): DialogStateTransformer {
 
     companion object {
         private const val AMOUNT_LOWER_BOUND = 1
+
         private const val AMOUNT_UPPER_BOUND = 1500
+
+        /**
+         * Хранит текущее значение обещанного платежа для пользователя на шаге ввода суммы платежа.
+         * Key - telegramId, value - значение обещанного платежа
+         */
+        private val promisePaymentCache = ConcurrentHashMap<Long, Int>()
     }
 
     override fun getCommand(): Command =
@@ -35,7 +42,7 @@ class PromisePaymentStateTransformer(
                 command = getCommand(),
                 options = PromisePaymentOptions(),
                 steps = listOf(PromisePaymentStep.WARNING, PromisePaymentStep.AMOUNT),
-                response = DialogState.Response.next(responseMessageService.clientPromisePaymentWarningMessage())
+                response = DialogState.Response.next(promisePaymentMessageService.showWarning())
             )
         }
 
@@ -46,7 +53,7 @@ class PromisePaymentStateTransformer(
                     processWarningOption(user = user, state = state, option = request.input)
 
                 PromisePaymentStep.AMOUNT ->
-                    processAmountOption(state = state, option = request.input).toMono()
+                    processAmountOption(user = user, state = state, option = request.input).toMono()
 
                 else -> IllegalStateException("unknown step: '$step'").toMono()
             }
@@ -57,60 +64,70 @@ class PromisePaymentStateTransformer(
             getActualRecommendedPayment(user)
                 .map { recommendedAmount ->
                     if (recommendedAmount > AMOUNT_UPPER_BOUND) {
-                        state.cancel(responseMessageService.clientPromisePaymentDebtsOverdueMessage())
+                        state.cancel(promisePaymentMessageService.showDebtsOverdueError())
                     } else {
+                        promisePaymentCache[user.telegramId] = recommendedAmount
                         state.incrementStep(
                             options = state.options,
-                            stepData = PromisePaymentAmountStepData(
-                                amount = recommendedAmount
-                            ),
-                            responseMessageItem = responseMessageService.clientPromisePaymentAmountMessage(recommendedAmount)
+                            responseMessageItem = promisePaymentMessageService.showCalculator(recommendedAmount)
                         )
                     }
                 }
         } else {
-            state.invalidOption(responseMessageService.clientPromisePaymentInvalidWarningMessage()).toMono()
+            throw RuntimeException("step '${state.currentStep()}': unexpected option '$option'")
         }
 
-    private fun processAmountOption(state: DialogState, option: String): DialogState =
+    private fun processAmountOption(user: UserEntity, state: DialogState, option: String): DialogState =
         when (option) {
+            PromisePaymentAvailableOptions.CANCEL_AMOUNT_STEP -> {
+                promisePaymentCache.remove(user.telegramId)
+                state.cancel(promisePaymentMessageService.showMainMenu())
+            }
+
             PromisePaymentAvailableOptions.AMOUNT_SUBMIT -> {
-                val updatedOptions = (state.options as PromisePaymentOptions).copy(amount = state.amount())
+                val promisePaymentAmount = promisePaymentCache.remove(user.telegramId)
+                    ?: throw RuntimeException("promise payment amount not found in cache by key '${user.telegramId}'")
+                val updatedOptions = (state.options as PromisePaymentOptions).copy(amount = promisePaymentAmount)
                 state.finish(updatedOptions)
             }
 
             in PromisePaymentAvailableOptions.calculatorOptions ->
-                doProcessAmountOption(state = state, option = option)
+                doProcessAmountOption(user = user, state = state, option = option)
 
-            else ->
-                state.invalidOption(responseMessageService.clientPromisePaymentAmountMessage(state.amount()))
+            else -> {
+                promisePaymentCache.remove(user.telegramId)
+                throw RuntimeException("step '${state.currentStep()}': unexpected option '$option'")
+            }
         }
 
-    private fun doProcessAmountOption(state: DialogState, option: String): DialogState {
-        val updatedAmount = doUpdateAmount(state.amount(), option)
+    private fun doProcessAmountOption(user: UserEntity, state: DialogState, option: String): DialogState {
+        val amount = promisePaymentCache[user.telegramId]
+            ?: throw RuntimeException("promise payment amount not found in cache by key '${user.telegramId}'")
+
+        val updatedAmount = doUpdateAmount(currentAmount = amount, option = option)
+
         return when {
             updatedAmount < AMOUNT_LOWER_BOUND ->
-                state.invalidOption(
-                    responseMessageService.clientPromisePaymentTooLowAmountMessage(amount = state.amount(), lowerBound = AMOUNT_LOWER_BOUND)
+                state.stayCurrentStep(
+                    promisePaymentMessageService.showCalculatorWithTooLowAmount(amount = amount , lowerBound = AMOUNT_LOWER_BOUND)
                 )
 
             updatedAmount > AMOUNT_UPPER_BOUND ->
-                state.invalidOption(
-                    responseMessageService.clientPromisePaymentTooHighAmountMessage(amount = state.amount(), upperBound = AMOUNT_UPPER_BOUND)
+                state.stayCurrentStep(
+                    promisePaymentMessageService.showCalculatorWithTooHighAmount(amount = amount, upperBound = AMOUNT_UPPER_BOUND)
                 )
 
             else -> {
-                val stepData = state.stepData as PromisePaymentAmountStepData
-                state.updateStepData(
-                    stepData = stepData.copy(amount = updatedAmount),
-                    responseMessageItem = responseMessageService.clientPromisePaymentAmountMessage(updatedAmount)
+                promisePaymentCache[user.telegramId] = updatedAmount
+                state.stayCurrentStep(
+                    promisePaymentMessageService.showCalculator(updatedAmount)
                 )
             }
         }
     }
 
     private fun getActualRecommendedPayment(user: UserEntity): Mono<Int> =
-        recommendedPaymentService.getActual(user.agrmId!!)
+        recommendedPaymentService.getActual(user.agreementId!!)
             .map { AmountUtils.integerRound(it) }
 
     private fun doUpdateAmount(currentAmount: Int, option: String): Int =
@@ -124,6 +141,4 @@ class PromisePaymentStateTransformer(
             else -> currentAmount
         }
 
-    private fun DialogState.amount(): Int =
-        (this.stepData as PromisePaymentAmountStepData).amount!!
 }

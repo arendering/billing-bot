@@ -1,6 +1,6 @@
 package su.vshk.billing.bot.dialog.step
 
-class PaymentsStep {
+class PaymentHistoryStep {
     companion object {
         const val PERIOD = "period"
     }

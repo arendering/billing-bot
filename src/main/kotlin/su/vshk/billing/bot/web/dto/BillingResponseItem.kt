@@ -10,11 +10,12 @@ data class BillingResponseItem<T>(
 }
 
 data class Fault(
-    @JsonProperty("faultcode")
+    @JsonProperty(value = "faultcode")
     val faultCode: String? = null,
 
-    @JsonProperty("faultstring")
+    @JsonProperty(value = "faultstring")
     val faultString: String? = null,
 
+    @JsonProperty(value = "detail")
     val detail: String? = null
 )

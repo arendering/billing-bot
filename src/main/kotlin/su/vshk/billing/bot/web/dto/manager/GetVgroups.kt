@@ -6,15 +6,17 @@ import su.vshk.billing.bot.util.AmountDeserializer
 import java.math.BigDecimal
 
 data class GetVgroupsRequest(
-    val flt: GetVgroupsFlt? = null
+    @JsonProperty(value = "flt")
+    val filter: GetVgroupsFilter? = null
 )
 
-data class GetVgroupsFlt(
+data class GetVgroupsFilter(
     @JsonProperty(value = "userid")
     val userId: Long? = null
 )
 
 data class GetVgroupsResponse(
+    @JsonProperty(value = "ret")
     val ret: List<GetVgroupsRet>? = null
 )
 
@@ -29,13 +31,13 @@ data class GetVgroupsRet(
      * Идентификатор договора
      */
     @JsonProperty("agrmid")
-    val agrmId: Long? = null,
+    val agreementId: Long? = null,
 
     /**
      * Номер договора
      */
     @JsonProperty("agrmnum")
-    val agrmNum: String? = null,
+    val agreementNumber: String? = null,
 
     /**
      * Баланс
@@ -45,8 +47,37 @@ data class GetVgroupsRet(
     val balance: BigDecimal? = null,
 
     /**
+     * Идентификатор тарифа
+     */
+    @JsonProperty("tarid")
+    val tariffId: Long? = null,
+
+    /**
      * Описание тарифа
      */
     @JsonProperty("tarifdescr")
-    val tariffDescription: String? = null
+    val tariffDescription: String? = null,
+
+    /**
+     * Адреса
+     */
+    @JsonProperty("address")
+    val addresses: List<GetVgroupsAddress>? = null,
+
+    /**
+     * Описание агента
+     */
+    @JsonProperty("agentdescr")
+    val agentDescription: String? = null,
+
+    /**
+     * Текущее состояние блокировки
+     */
+    @JsonProperty("blocked")
+    val blocked: Long? = null
+)
+
+data class GetVgroupsAddress(
+    @JsonProperty(value = "address")
+    val address: String? = null
 )

@@ -5,8 +5,8 @@ import reactor.core.publisher.Mono
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dialog.option.PromisePaymentOptions
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
+import su.vshk.billing.bot.message.response.PromisePaymentMessageService
 import su.vshk.billing.bot.util.debugTraceId
 import su.vshk.billing.bot.util.getLogger
 import su.vshk.billing.bot.web.client.BillingWebClient
@@ -15,7 +15,7 @@ import su.vshk.billing.bot.web.dto.client.ClientPromisePaymentRequest
 @Service
 class PromisePaymentExecutor(
     private val billingWebClient: BillingWebClient,
-    private val responseMessageService: ResponseMessageService
+    private val promisePaymentMessageService: PromisePaymentMessageService
 ): CommandExecutor {
 
     companion object {
@@ -30,23 +30,23 @@ class PromisePaymentExecutor(
             options as PromisePaymentOptions
             log.debugTraceId(context, "try to execute command '${getCommand().value}' with options: ${options}")
 
-            val request = ClientPromisePaymentRequest(agrmId = user.agrmId, amount = options.amount)
+            val request = ClientPromisePaymentRequest(agreementId = user.agreementId, amount = options.amount)
             billingWebClient.clientPromisePayment(user = user, request = request)
                 .map {
                     if (it.isFault()) {
                         val faultString = it.fault?.faultString?.lowercase()
                         when {
                             faultString?.contains("payment is overdue") == true ->
-                                responseMessageService.clientPromisePaymentOverdueMessage()
+                                promisePaymentMessageService.showLastPaymentOverdueError()
 
                             faultString?.contains("already assigned") == true ->
-                                responseMessageService.clientPromisePaymentAssignedMessage()
+                                promisePaymentMessageService.showPaymentAlreadyAssignedError()
 
                             else ->
-                                responseMessageService.clientPromisePaymentErrorMessage()
+                                promisePaymentMessageService.showPaymentGenericError()
                         }
                     } else {
-                        responseMessageService.clientPromisePaymentSuccessMessage()
+                        promisePaymentMessageService.showSuccessfullyAssignedPayment()
                     }
                 }
         }

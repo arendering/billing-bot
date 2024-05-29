@@ -39,3 +39,4 @@
 | bot.payment-notification.billing-request-delay-seconds | 1                     | Задержка в секундах при обращении в биллинг при формировании напоминания                            |
 | bot.error-group-notification.enabled                   | false                 | Включена ли отправка сообщения об ошибке в группу с ошибками                                        |
 | bot.error-group-notification.chat-id                   |                       | ID группы с ошибками                                                                                |
+| bot.cache.sbss-knowledge-expired-hours                 | 24                    | Время жизни кэша для тарифов из базы знаний                                                         |

@@ -36,10 +36,9 @@ class ResponseConverterTest {
 
     @Test
     fun testManagerLoginResponse() {
-        val httpBody = readResourceAsText("/converter/manager_login_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.MANAGER_LOGIN,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/manager_login_response.xml"),
             clazz = LoginResponse::class.java
         )
         
@@ -48,10 +47,9 @@ class ResponseConverterTest {
 
     @Test
     fun testGetVgroupsResponse() {
-        val httpBody = readResourceAsText("/converter/get_vgroups_response.xml")
         val getVgroupsResponse = responseConverter.convert(
             method = BillingMethod.GET_VGROUPS,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/get_vgroups_response.xml"),
             clazz = GetVgroupsResponse::class.java
         )
 
@@ -59,16 +57,17 @@ class ResponseConverterTest {
 
         val first = getVgroupsResponse.ret?.first()!!
         assertThat(first.username).isEqualTo("Иванов Иван Иванович")
-        assertThat(first.agrmId).isEqualTo(9999L)
-        assertThat(first.agrmNum).isEqualTo("Int-1111/11")
+        assertThat(first.agreementId).isEqualTo(9999L)
+        assertThat(first.agreementNumber).isEqualTo("Int-1111/11")
         assertThat(first.balance).isEqualTo("486.10")
-        assertThat(first.tariffDescription).isEqualTo("Услуги")
+        assertThat(first.addresses?.size).isEqualTo(3)
+        assertThat(first.agentDescription).isEqualTo("Услуги")
+        assertThat(first.blocked).isEqualTo(0)
     }
 
     @Test
     fun testClientLoginErrorReponse() {
-        val httpBody = readResourceAsText("/converter/client_login_error.xml")
-        val response = responseConverter.convertFault(httpBody)
+        val response = responseConverter.convertFault(readResourceAsText("/converter/client_login_error.xml"))
 
         assertThat(response.faultCode).isEqualTo("SOAP-ENV:Server")
         assertThat(response.faultString).contains("Invalid login/pass")
@@ -77,22 +76,20 @@ class ResponseConverterTest {
 
     @Test
     fun testClientLoginResponse() {
-        val httpBody = readResourceAsText("/converter/client_login_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.CLIENT_LOGIN,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/client_login_response.xml"),
             clazz = ClientLoginResponse::class.java
         )
         
-        assertThat(response.ret?.uid).isEqualTo(1917L)
+        assertThat(response.ret?.userId).isEqualTo(1917L)
     }
 
     @Test
     fun testGetPaymentsEmptyResponse() {
-        val httpBody = readResourceAsText("/converter/get_payments_empty_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.GET_PAYMENTS,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/get_payments_empty_response.xml"),
             clazz = GetPaymentsResponse::class.java
         )
 
@@ -101,10 +98,9 @@ class ResponseConverterTest {
 
     @Test
     fun testGetPaymentsResponse() {
-        val httpBody = readResourceAsText("/converter/get_payments_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.GET_PAYMENTS,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/get_payments_response.xml"),
             clazz = GetPaymentsResponse::class.java
         )
 
@@ -127,10 +123,9 @@ class ResponseConverterTest {
     @Test
     fun testSinglePayment() {
         // проверяет, что один элемент корректно десериализуется в список
-        val httpBody = readResourceAsText("/converter/get_payments_single_element.xml")
         val response = responseConverter.convert(
             method = BillingMethod.GET_PAYMENTS,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/get_payments_single_element.xml"),
             clazz = GetPaymentsResponse::class.java
         )
 
@@ -140,10 +135,9 @@ class ResponseConverterTest {
 
     @Test
     fun testGetAccountResponse() {
-        val httpBody = readResourceAsText("/converter/get_account_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.GET_ACCOUNT,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/get_account_response.xml"),
             clazz = GetAccountResponse::class.java
         )
 
@@ -160,10 +154,9 @@ class ResponseConverterTest {
 
     @Test
     fun testClientPromisePaymentResponse() {
-        val httpBody = readResourceAsText("/converter/client_promise_payment_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.CLIENT_PROMISE_PAYMENT,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/client_promise_payment_response.xml"),
             clazz = ClientPromisePaymentResponse::class.java
         )
 
@@ -172,13 +165,25 @@ class ResponseConverterTest {
 
     @Test
     fun testGetRecommendedPaymentResponse() {
-        val httpBody = readResourceAsText("/converter/get_recommended_payment_response.xml")
         val response = responseConverter.convert(
             method = BillingMethod.GET_RECOMMENDED_PAYMENT,
-            httpBody = httpBody,
+            httpBody = readResourceAsText("/converter/get_recommended_payment_response.xml"),
             clazz = GetRecommendedPaymentResponse::class.java
         )
-        assertThat(response.ret).isEqualTo("42.13")
+        assertThat(response.amount).isEqualTo("42.13")
+    }
+
+    @Test
+    fun testGetSbssKnowledge() {
+        val response = responseConverter.convert(
+            method = BillingMethod.GET_SBSS_KNOWLEDGE,
+            httpBody = readResourceAsText("/converter/get_sbss_knowledge_response.xml"),
+            clazz = GetSbssKnowledgeResponse::class.java
+        )
+
+        val texts = response.ret?.posts?.mapNotNull { it.post?.text }
+        assertThat(texts).isNotNull
+        assertThat(texts!!.size).isEqualTo(4)
     }
 
     private fun readResourceAsText(path: String): String =

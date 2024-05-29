@@ -8,7 +8,7 @@ import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.Bot
 import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.dao.service.UserDaoService
-import su.vshk.billing.bot.message.ResponseMessageService
+import su.vshk.billing.bot.message.response.NotificationMessageService
 import su.vshk.billing.bot.service.PaymentNotificationService
 import su.vshk.billing.bot.util.getLogger
 import su.vshk.billing.bot.util.putTraceId
@@ -20,7 +20,7 @@ class PaymentScheduler(
     private val properties: BotProperties,
     private val userDaoService: UserDaoService,
     private val paymentNotificationService: PaymentNotificationService,
-    private val responseMessageService: ResponseMessageService
+    private val notificationMessageService: NotificationMessageService
 ) {
 
     companion object {
@@ -60,16 +60,16 @@ class PaymentScheduler(
     }
 
     private fun sendPaymentNotifications(daysToLast: Int) {
-        userDaoService.findByPaymentNotificationEnabledTrue()
+        userDaoService.findUsersEnabledNotification()
             .flatMapMany { Flux.fromIterable(it) }
             .delayElements(Duration.ofSeconds(properties.paymentNotification.billingRequestDelaySeconds))
-            .flatMap({ user ->
-                paymentNotificationService.createPaymentNotification(user = user, daysToLast = daysToLast)
+            .flatMap({ dto ->
+                paymentNotificationService.createPaymentNotification(userDto = dto, daysToLast = daysToLast)
                     .flatMap {
-                        bot.sendResponse(chatId = user.telegramId, responseMessageItem = it)
-                            .onErrorResume { responseMessageService.emptyMessage().toMono() }
+                        bot.sendResponse(chatId = dto.telegramId, responseMessageItem = it)
+                            .onErrorResume { notificationMessageService.emptyMessage().toMono() }
                     }
-                    .map { Pair(user.telegramId, it) }
+                    .map { Pair(dto.telegramId, it) }
                     .putTraceId()
             }, 10 ) // значение concurrency выбрано произвольно
             .collectList()

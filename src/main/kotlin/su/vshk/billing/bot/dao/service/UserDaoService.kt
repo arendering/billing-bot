@@ -5,6 +5,7 @@ import su.vshk.billing.bot.dao.repository.UserRepository
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
+import su.vshk.billing.bot.dao.model.EnabledNotificationUserDto
 import java.util.*
 
 @Service
@@ -18,19 +19,16 @@ class UserDaoService(
 
     fun saveUser(
         telegramId: Long,
-        uid: Long,
+        userId: Long,
         login: String,
-        password: String,
-        agrmId: Long
+        agreementId: Long
     ): Mono<UserEntity> =
         Mono.fromCallable {
             UserEntity(
                 telegramId = telegramId,
-                uid = uid,
+                userId = userId,
                 login = login,
-                password = password,
-                agrmId = agrmId,
-                paymentNotificationEnabled = false
+                agreementId = agreementId
             ).let { userRepository.save(it) }
         }.subscribeOn(Schedulers.boundedElastic())
 
@@ -44,8 +42,8 @@ class UserDaoService(
             userRepository.deleteById(telegramId)
         }.subscribeOn(Schedulers.boundedElastic())
 
-    fun findByPaymentNotificationEnabledTrue(): Mono<List<UserEntity>> =
+    fun findUsersEnabledNotification(): Mono<List<EnabledNotificationUserDto>> =
         Mono.fromCallable {
-            userRepository.findByPaymentNotificationEnabledTrue()
+            userRepository.findUsersEnabledNotification()
         }.subscribeOn(Schedulers.boundedElastic())
 }

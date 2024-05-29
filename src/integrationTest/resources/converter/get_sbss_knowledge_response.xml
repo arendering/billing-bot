@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope
+	xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+	xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	xmlns:lbapi="urn:api3">
+	<SOAP-ENV:Body>
+		<lbapi:getSbssKnowledgeResponse>
+			<ret>
+				<knowledge>
+					<id>0</id>
+					<classid>0</classid>
+					<authorid>0</authorid>
+					<authortype>0</authortype>
+					<respondentid>0</respondentid>
+					<respondenttype>0</respondenttype>
+					<replies>0</replies>
+					<createdon></createdon>
+					<lastpost></lastpost>
+					<name></name>
+					<classname></classname>
+					<classcolor></classcolor>
+					<authorname></authorname>
+					<respondentname></respondentname>
+					<authorlogin></authorlogin>
+					<respondentlogin></respondentlogin>
+				</knowledge>
+				<posts>
+					<post>
+						<id>5</id>
+						<knowledgeid>3</knowledgeid>
+						<authortype>0</authortype>
+						<authorid>11</authorid>
+						<spec>1</spec>
+						<createdon>2024-04-19 22:09:28</createdon>
+						<text>tarid: 56, type: internet, name: Свои, speed: 1Gbit/s, rent: 0р/мес, client: физическое лицо.</text>
+						<authorname>Иванов Иван Иванович</authorname>
+						<authorlogin>jack</authorlogin>
+					</post>
+				</posts>
+				<posts>
+					<post>
+						<id>6</id>
+						<knowledgeid>3</knowledgeid>
+						<authortype>0</authortype>
+						<authorid>11</authorid>
+						<spec>1</spec>
+						<createdon>2024-04-19 22:10:51</createdon>
+						<text>tarid: 64, type: internet, name: Подключение, speed: 1Gbit/s, rent: 0р/мес, client: физическое лицо.</text>
+						<authorname>Иванов Иван Иванович</authorname>
+						<authorlogin>jack</authorlogin>
+					</post>
+				</posts>
+				<posts>
+					<post>
+						<id>7</id>
+						<knowledgeid>3</knowledgeid>
+						<authortype>0</authortype>
+						<authorid>11</authorid>
+						<spec>1</spec>
+						<createdon>2024-04-19 22:21:22</createdon>
+						<text>tarid: 222, type: tv, name: 24ТВ "Лайт +", channels: 241 канал, rent: 199р/мес.</text>
+						<authorname>Иванов Иван Иванович</authorname>
+						<authorlogin>jack</authorlogin>
+					</post>
+				</posts>
+				<posts>
+					<post>
+						<id>8</id>
+						<knowledgeid>3</knowledgeid>
+						<authortype>0</authortype>
+						<authorid>11</authorid>
+						<spec>1</spec>
+						<createdon>2024-04-26 09:39:01</createdon>
+						<text>tarid: 212, type: internet-tv, name: Мега+ТВ, speed: 500Mbit/s, channels: 144 канала, rent: 1200р/мес.</text>
+						<authorname>Иванов Иван Иванович</authorname>
+						<authorlogin>jack</authorlogin>
+					</post>
+				</posts>
+			</ret>
+		</lbapi:getSbssKnowledgeResponse>
+	</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

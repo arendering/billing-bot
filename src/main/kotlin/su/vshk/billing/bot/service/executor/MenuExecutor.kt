@@ -5,14 +5,14 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.UserEntity
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
+import su.vshk.billing.bot.message.response.CommonMessageService
 import su.vshk.billing.bot.util.debugTraceId
 import su.vshk.billing.bot.util.getLogger
 
 @Service
 class MenuExecutor(
-    private val responseMessageService: ResponseMessageService
+    private val commonMessageService: CommonMessageService
 ): CommandExecutor {
 
     companion object {
@@ -25,6 +25,6 @@ class MenuExecutor(
     override fun execute(user: UserEntity, options: Any?): Mono<ResponseMessageItem> =
         Mono.deferContextual { context ->
             log.debugTraceId(context, "try to execute command '${getCommand().value}'")
-            responseMessageService.mainMenuMessage().toMono()
+            commonMessageService.showMainMenu().toMono()
         }
 }

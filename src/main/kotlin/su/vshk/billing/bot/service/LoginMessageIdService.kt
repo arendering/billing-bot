@@ -8,10 +8,10 @@ import su.vshk.billing.bot.service.dto.LoginMessageDto
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Сервис для управления пользовательскими сообщениями на этапе регистрации в боте.
+ * Сервис для управления идентификаторами пользовательских сообщений на этапе регистрации в боте.
  */
 @Service
-class LoginMessageService {
+class LoginMessageIdService {
     private val messages: ConcurrentHashMap<Long, LoginInputDto> = ConcurrentHashMap()
 
     fun init(request: RequestMessageItem): Mono<Int> =

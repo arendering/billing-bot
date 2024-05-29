@@ -7,14 +7,14 @@ import java.math.BigDecimal
 
 data class GetRecommendedPaymentRequest(
     @JsonProperty("id")
-    val agrmId: Long? = null,
+    val agreementId: Long? = null,
 
     @JsonProperty("mode")
     val mode: Long? = null
 )
 
 data class GetRecommendedPaymentResponse(
-    @JsonProperty("ret")
     @JsonDeserialize(using = AmountDeserializer::class)
-    val ret: BigDecimal? = null
+    @JsonProperty("ret")
+    val amount: BigDecimal? = null
 )

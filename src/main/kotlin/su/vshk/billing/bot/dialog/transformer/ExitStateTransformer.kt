@@ -7,12 +7,12 @@ import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dialog.dto.DialogState
 import su.vshk.billing.bot.dialog.option.ExitAvailableOptions
 import su.vshk.billing.bot.dialog.step.ExitStep
-import su.vshk.billing.bot.message.ResponseMessageService
 import su.vshk.billing.bot.message.dto.RequestMessageItem
+import su.vshk.billing.bot.message.response.LogoutMessageService
 
 @Component
 class ExitStateTransformer(
-    private val responseMessageService: ResponseMessageService
+    private val logoutMessageService: LogoutMessageService
 ): DialogStateTransformer {
 
     override fun getCommand(): Command =
@@ -23,7 +23,7 @@ class ExitStateTransformer(
             DialogState(
                 command = getCommand(),
                 steps = listOf(ExitStep.WARNING),
-                response = DialogState.Response.next(responseMessageService.logoutWarningMessage()),
+                response = DialogState.Response.next(logoutMessageService.showWarning()),
             )
         }
 
@@ -39,6 +39,6 @@ class ExitStateTransformer(
         if (option == ExitAvailableOptions.YES) {
             state.finish(null)
         } else {
-            state.invalidOption(responseMessageService.logoutInvalidWarningMessage())
+            throw RuntimeException("step ${state.currentStep()}: unexpected option '$option'")
         }
 }

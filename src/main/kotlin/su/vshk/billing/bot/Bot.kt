@@ -21,7 +21,6 @@ import java.util.*
 @Component
 class Bot(
     private val properties: BotProperties,
-    private val responseMessageContentFormatter: ResponseMessageContentFormatter,
     private val processorService: ProcessorService,
     private val postProcessorService: PostProcessorService
 ): TelegramLongPollingBot() {
@@ -41,6 +40,7 @@ class Bot(
      */
     override fun onUpdateReceived(update: Update?) {
         resolveUserInput(update)
+            ?.let { filterGroupMessage(it) }
             ?.let { request ->
                 processorService.process(request)
                     .flatMap { sendResponse(chatId = request.chatId, requestMessageId = request.messageId, responseMessageItem = it) }
@@ -90,6 +90,12 @@ class Bot(
 
             else -> null
         }
+
+    /**
+     * Отбрасывает сообщение, если оно было отправлено в группе или супергруппе.
+     */
+    private fun filterGroupMessage(request: RequestMessageItem): RequestMessageItem? =
+        if (request.chatId < 0) null else request
 
     private fun tryToDeleteMessages(chatId: Long, responseMessageItem: ResponseMessageItem): Mono<ResponseMessageItem> =
         if (responseMessageItem.meta.deleteMessages.active) {
@@ -174,12 +180,14 @@ class Bot(
             }
         }
 
-    //TODO: это должен делать zabbix
     private fun sendTraceIdToErrorGroup(traceId: String): Mono<Optional<Message>> =
         if (properties.errorGroupNotification.enabled) {
             sendMessage(
                 chatId = properties.errorGroupNotification.chatId!!,
-                content = responseMessageContentFormatter.errorGroupSomethingWentWrong(traceId)
+                content = ResponseMessageItem.Content(
+                    text = "Код ошибки: $traceId",
+                    buttons = emptyList()
+                )
             ).map { Optional.of(it) }
         } else {
             Optional.empty<Message>().toMono()
