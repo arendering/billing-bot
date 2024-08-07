@@ -128,6 +128,22 @@ class BillingWebClient(
                 }
         }.map { unwrapData(it) }
 
+    /**
+     * Сохраняет предварительный платеж
+     */
+    fun insertPrePayment(request: InsertPrePaymentRequest): Mono<InsertPrePaymentResponse> =
+        WebUtils.retryIfAuthFailedExecute {
+            billingLoginService.getManagerCookie()
+                .flatMap {
+                    doRequest(
+                        method = BillingMethod.INSERT_PRE_PAYMENT,
+                        cookie = it,
+                        request = request,
+                        responseClazz = InsertPrePaymentResponse::class.java
+                    )
+                }
+        }.map { unwrapData(it) }
+
     private fun <Req, Resp> doRequest(
         method: String,
         cookie: String,

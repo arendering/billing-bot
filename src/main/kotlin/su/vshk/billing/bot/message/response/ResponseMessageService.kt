@@ -11,8 +11,6 @@ import java.util.*
 abstract class ResponseMessageService(
     private val messageSource: MessageSource
 ) {
-    protected val RUB = '₽'
-
     private val locale = Locale("ru", "RU")
 
     fun showMainMenu() =
@@ -38,7 +36,7 @@ abstract class ResponseMessageService(
                 .addText(text = getText("menu.main.header"), textType = TextType.BOLD_ITALIC)
                 .build(),
             buttons = listOf(
-                listOf(agreementsKeyboardItem()),
+                listOf(agreementsKeyboardItem(), yookassaPaymentKeyboardItem()),
                 listOf(paymentHistoryKeyboardItem(), promisePaymentKeyboardItem()),
                 listOf(tariffsKeyboardItem(), notificationKeyboardItem()),
                 listOf(contactsKeyboardItem(), exitKeyboardItem())
@@ -68,6 +66,9 @@ abstract class ResponseMessageService(
 
     private fun agreementsKeyboardItem() =
         ResponseMessageItem.InlineKeyboardItem(label = getText("menu.agreements"), callbackData = Command.AGREEMENTS.value)
+
+    private fun yookassaPaymentKeyboardItem() =
+        ResponseMessageItem.InlineKeyboardItem(label = getText("menu.yookassa.payment"), callbackData = Command.YOOKASSA_PAYMENT.value)
 
     private fun paymentHistoryKeyboardItem() =
         ResponseMessageItem.InlineKeyboardItem(label = getText("menu.payment.history"), callbackData = Command.PAYMENT_HISTORY.value)

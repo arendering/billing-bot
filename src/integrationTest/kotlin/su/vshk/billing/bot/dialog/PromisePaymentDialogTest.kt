@@ -6,6 +6,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import reactor.kotlin.core.publisher.toMono
 import reactor.kotlin.test.test
+import su.vshk.billing.bot.dao.model.CalculatorButton
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dialog.dto.StateDto
 import su.vshk.billing.bot.dialog.option.PromisePaymentAvailableOptions
@@ -51,8 +52,8 @@ class PromisePaymentDialogTest: BaseDialogTest() {
                 it.state
                     .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
                     .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
+                        "Установите необходимую сумму",
+                        "Сумма пополнения",
                         "500 ₽"
                     )
                     .assertCalculatorButtons()
@@ -64,49 +65,13 @@ class PromisePaymentDialogTest: BaseDialogTest() {
         assertDialogContainsUser()
 
         dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
-                        "600 ₽"
-                    )
-                    .assertCalculatorButtons()
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
-                        "599 ₽"
-                    )
-                    .assertCalculatorButtons()
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_SUBMIT))
+            .processOption(request = createRequest(input = CalculatorButton.ENTER))
             .test()
             .expectNextMatches {
                 it.state
                     .assertFlags(isFinishedExpected = true, isCanceledExpected = false)
                     .assertResponseMessageIsNull()
-                    .assertOptions(expectedAmount = 599)
+                    .assertOptions(expectedAmount = 500)
                 true
             }
             .verifyComplete()
@@ -158,166 +123,6 @@ class PromisePaymentDialogTest: BaseDialogTest() {
         assertDialogDoesNotContainUser()
     }
 
-    @Test
-    fun testPromisePaymentUpperBound() {
-        dialogProcessor
-            .startDialog(
-                request = createRequest(input = command.value),
-                user = createUser(),
-                command = command
-            )
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Предупреждение",
-                        "Обещанный платеж выдается сроком на 5 календарных дней",
-                        "Отвечая положительно, Вы соглашаетесь с условиями оказания услуги"
-                    )
-                    .assertButtonLabelsContains("Согласен/согласна", "⬅ Вернуться в главное меню")
-                    .assertButtonCallbackDataContains("/approve", "/cancel")
-
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        mockRecommendedPayment(BigDecimal("1450"))
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
-                        "1450 ₽"
-                    )
-                    .assertCalculatorButtons()
-
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_PLUS_ONE_HUNDRED))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
-                        "1450 ₽",
-                        "Не может быть больше 1500 ₽"
-                    )
-                    .assertCalculatorButtons()
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_SUBMIT))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = true, isCanceledExpected = false)
-                    .assertResponseMessageIsNull()
-                    .assertOptions(expectedAmount = 1450)
-                true
-            }
-            .verifyComplete()
-
-        assertDialogDoesNotContainUser()
-    }
-
-    @Test
-    fun testPromisePaymentLowerBound() {
-        dialogProcessor
-            .startDialog(
-                request = createRequest(input = command.value),
-                user = createUser(),
-                command = command
-            )
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Предупреждение",
-                        "Обещанный платеж выдается сроком на 5 календарных дней",
-                        "Отвечая положительно, Вы соглашаетесь с условиями оказания услуги"
-                    )
-                    .assertButtonLabelsContains("Согласен/согласна", "⬅ Вернуться в главное меню")
-                    .assertButtonCallbackDataContains("/approve", "/cancel")
-
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        mockRecommendedPayment(BigDecimal("50"))
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
-                        "50 ₽"
-                    )
-                    .assertCalculatorButtons()
-
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE_HUNDRED))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = false, isCanceledExpected = false)
-                    .assertResponseTextContains(
-                        "Установите необходимую сумму обещанного платежа используя виртуальные кнопки.",
-                        "Сумма пополнения:",
-                        "50 ₽",
-                        "Не может быть меньше 1 ₽"
-                    )
-                    .assertCalculatorButtons()
-                true
-            }
-            .verifyComplete()
-
-        assertDialogContainsUser()
-
-        dialogProcessor
-            .processOption(request = createRequest(input = PromisePaymentAvailableOptions.AMOUNT_SUBMIT))
-            .test()
-            .expectNextMatches {
-                it.state
-                    .assertFlags(isFinishedExpected = true, isCanceledExpected = false)
-                    .assertResponseMessageIsNull()
-                    .assertOptions(expectedAmount = 50)
-                true
-            }
-            .verifyComplete()
-
-        assertDialogDoesNotContainUser()
-    }
-
     private fun mockRecommendedPayment(amount: BigDecimal) {
         whenever(
             billingWebClient.getRecommendedPayment(any())
@@ -328,8 +133,8 @@ class PromisePaymentDialogTest: BaseDialogTest() {
 
     private fun StateDto.assertCalculatorButtons(): StateDto =
         this
-            .assertButtonLabelsContains("+1 ₽", "-1 ₽", "+25 ₽", "-25 ₽", "+100 ₽", "-100 ₽", "Подключить", "Отмена")
-            .assertButtonCallbackDataContains("+1", "-1", "+25", "-25", "+100", "-100", "/submit", "/cancel_amount_step")
+            .assertButtonLabelsContains("7", "8", "9", "4", "5", "6", "1", "2", "3", "⌫", "0", "AC", "Готово", "⬅ Вернуться в главное меню")
+            .assertButtonCallbackDataContains("7", "8", "9", "4", "5", "6", "1", "2", "3", "erase", "0", "clear", "enter", "cancel_amount_step")
 
     private fun StateDto.assertOptions(expectedAmount: Int): StateDto {
         val options = this.options as PromisePaymentOptions

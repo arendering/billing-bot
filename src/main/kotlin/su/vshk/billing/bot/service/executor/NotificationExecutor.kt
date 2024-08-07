@@ -58,7 +58,7 @@ class NotificationExecutor(
 
                 NotificationAvailableOptions.DISABLE ->
                     Mono
-                        .defer { paymentNotificationDaoService.deleteById(user.telegramId) }
+                        .defer { paymentNotificationDaoService.removeByIdSafe(user.telegramId) }
                         .map { notificationMessageService.disabled() }
 
                 else -> throw RuntimeException("unsupported switch option '$switch'")
