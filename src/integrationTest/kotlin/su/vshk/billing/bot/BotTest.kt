@@ -2,10 +2,6 @@ package su.vshk.billing.bot
 
 import com.nhaarman.mockitokotlin2.*
 import org.assertj.core.api.Assertions.assertThat
-import su.vshk.billing.bot.dao.repository.UserRepository
-import su.vshk.billing.bot.web.client.BillingWebClient
-import su.vshk.billing.bot.web.dto.BillingResponseItem
-import su.vshk.billing.bot.web.dto.client.ClientPromisePaymentResponse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -27,11 +23,18 @@ import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.dao.model.*
 import su.vshk.billing.bot.dao.repository.PaymentNotificationMessageRepository
 import su.vshk.billing.bot.dao.repository.PaymentNotificationRepository
+import su.vshk.billing.bot.dao.repository.UserRepository
 import su.vshk.billing.bot.dialog.option.*
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.service.LoginMessageIdService
 import su.vshk.billing.bot.util.getLogger
+import su.vshk.billing.bot.web.client.BillingWebClient
+import su.vshk.billing.bot.web.client.YookassaWebClient
+import su.vshk.billing.bot.web.dto.BillingResponseItem
+import su.vshk.billing.bot.web.dto.client.ClientPromisePaymentResponse
 import su.vshk.billing.bot.web.dto.manager.*
+import su.vshk.billing.bot.web.dto.yookassa.YookassaPayment
+import su.vshk.billing.bot.web.dto.yookassa.YookassaPaymentConfirmation
 import java.math.BigDecimal
 import java.util.*
 
@@ -61,6 +64,9 @@ class BotTest {
 
     @MockBean
     private lateinit var billingWebClient: BillingWebClient
+
+    @MockBean
+    private lateinit var yookassaWebClient: YookassaWebClient
 
     private val logger = getLogger()
     private val telegramId = 42L
@@ -364,7 +370,7 @@ class BotTest {
 
         preSaveUser()
 
-        pushButton(PromisePaymentAvailableOptions.AMOUNT_MINUS_ONE)
+        pushButton(CalculatorButton.ENTER)
 
         assertThat(editMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
         assertThat(editMessageMessageIdCaptor.firstValue).isEqualTo(buttonRequestMessageId)
@@ -406,6 +412,8 @@ class BotTest {
             .whenever(bot).deleteMessages(deleteMessageChatIdCaptor.capture(), deleteMessageIdsCaptor.capture())
 
         preSaveUser()
+        preSavePaymentNotificationMessage()
+
         pushButton(Command.EXIT.value)
         sendText(data = "some_text", requestMessageId = 10)
         pushButton(ExitAvailableOptions.YES)
@@ -422,6 +430,7 @@ class BotTest {
         assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(10)
 
         assertThat(userRepository.findAll()).isEmpty()
+        assertThat(paymentNotificationRepository.findAll()).isEmpty()
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
     }
 
@@ -446,6 +455,7 @@ class BotTest {
             .whenever(bot).deleteMessages(deleteMessageChatIdCaptor.capture(), deleteMessageIdsCaptor.capture())
 
         preSaveUser()
+        preSavePaymentNotification()
 
         val paymentNotificationMessageId = 100
         preSavePaymentNotificationMessage(paymentNotificationMessageId)
@@ -465,6 +475,7 @@ class BotTest {
         assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(paymentNotificationMessageId)
 
         assertThat(userRepository.findAll()).isEmpty()
+        assertThat(paymentNotificationRepository.findAll()).isEmpty()
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
     }
 
@@ -670,14 +681,14 @@ class BotTest {
 
         pushButton(Command.PROMISE_PAYMENT.value)
         pushButton(PromisePaymentAvailableOptions.WARNING_APPROVE)
-        pushButton(PromisePaymentAvailableOptions.AMOUNT_SUBMIT)
+        pushButton(CalculatorButton.ENTER)
 
         assertThat(editMessageChatIdCaptor.allValues).containsExactly(telegramId, telegramId, telegramId)
         assertThat(editMessageMessageIdCaptor.allValues).containsExactly(buttonRequestMessageId, buttonRequestMessageId, buttonRequestMessageId)
         editMessageResponseContentCaptor.allValues.map { it.text }.let { messages ->
             assertThat(messages.size).isEqualTo(3)
             assertThat(messages[0]).contains("Обещанный платеж выдается сроком на 5 календарных дней")
-            assertThat(messages[1]).contains("Установите необходимую сумму обещанного платежа используя виртуальные кнопки.", "Сумма пополнения:", "1000 ₽")
+            assertThat(messages[1]).contains("Установите необходимую сумму", "Сумма пополнения", "1 000 ₽")
             assertThat(messages[2]).contains("Обещанный платеж успешно подключен")
         }
 
@@ -912,6 +923,35 @@ class BotTest {
         assertThat(paymentNotificationMessageRepository.findAll()).isEmpty()
     }
 
+    @Test
+    fun testYookassaPayment() {
+        val editMessageChatIdCaptor = argumentCaptor<Long>()
+        val editMessageMessageIdCaptor = argumentCaptor<Int>()
+        val editMessageResponseContentCaptor = argumentCaptor<ResponseMessageItem.Content>()
+
+        doReturn(Mono.empty<Unit>())
+            .doReturn(Mono.empty<Unit>())
+            .whenever(bot).editMessage(editMessageChatIdCaptor.capture(), editMessageMessageIdCaptor.capture(), editMessageResponseContentCaptor.capture())
+
+        val user = preSaveUser()
+        mockGetAccount(email = "foo@bar.com")
+        mockGetRecommendedPayment(BigDecimal("100"))
+        mockGetVgroups(agreementId = user.agreementId, agreementNumber = "Int-1111/22")
+        mockInsertPrePayment()
+        mockYookassaCreatePayment()
+
+        pushButton(Command.YOOKASSA_PAYMENT.value)
+        pushButton(CalculatorButton.ENTER)
+
+        assertThat(editMessageChatIdCaptor.allValues).containsExactly(telegramId, telegramId)
+        assertThat(editMessageMessageIdCaptor.allValues).containsExactly(buttonRequestMessageId, buttonRequestMessageId)
+        editMessageResponseContentCaptor.allValues.map { it.text }.let { messages ->
+            assertThat(messages.size).isEqualTo(2)
+            assertThat(messages[0]).contains("Установите необходимую сумму", "Сумма пополнения", "100 ₽")
+            assertThat(messages[1]).contains("Используйте уникальную ссылку внизу сообщения", "some_confirmation_url")
+        }
+    }
+
     private fun preSaveUser(): UserEntity =
         UserEntity(
             telegramId = telegramId,
@@ -925,6 +965,13 @@ class BotTest {
             telegramId = telegramId,
             messageId = paymentNotificationMessageId
         ).let { paymentNotificationMessageRepository.save(it) }
+
+    private fun preSavePaymentNotification(notificationType: String = PaymentNotificationType.SINGLE) {
+        PaymentNotificationEntity(
+            telegramId = telegramId,
+            notificationType = notificationType
+        ).let { paymentNotificationRepository.save(it) }
+    }
 
     private fun sendText(data: String, requestMessageId: Int) {
         val update = createTextUpdate(chatId = telegramId, text = data, requestMessageId = requestMessageId)
@@ -1059,14 +1106,15 @@ class BotTest {
         return captor
     }
 
-    private fun mockGetAccount(promiseCredit: BigDecimal? = null, email: String? = null) {
+    private fun mockGetAccount(promiseCredit: BigDecimal? = null, email: String? = null, mobile: String? = null) {
         whenever(
             billingWebClient.getAccount(any())
         ).thenReturn(
             GetAccountResponse(
                 ret = GetAccountRet(
                     account = Account(
-                        email = email
+                        email = email,
+                        mobile = mobile
                     ),
                     agreements = listOf(
                         AccountAgreement(
@@ -1091,6 +1139,26 @@ class BotTest {
             billingWebClient.clientPromisePayment(any(), any())
         ).thenReturn(
             BillingResponseItem(data = ClientPromisePaymentResponse(ret = 1L)).toMono()
+        )
+    }
+
+    private fun mockInsertPrePayment() {
+        whenever(
+            billingWebClient.insertPrePayment(any())
+        ).thenReturn(
+            InsertPrePaymentResponse(prePaymentId = 222L).toMono()
+        )
+    }
+
+    private fun mockYookassaCreatePayment() {
+        whenever(
+            yookassaWebClient.createPayment(any())
+        ).thenReturn(
+            YookassaPayment(
+                confirmation = YookassaPaymentConfirmation(
+                    confirmationUrl = "some_confirmation_url"
+                )
+            ).toMono()
         )
     }
 }

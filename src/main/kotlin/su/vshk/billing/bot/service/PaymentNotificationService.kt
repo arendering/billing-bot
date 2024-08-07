@@ -57,14 +57,14 @@ class PaymentNotificationService(
      * Удаляет напоминание об оплате (пользователь нажал на кнопку).
      */
     fun deletePaymentNotification(request: RequestMessageItem): Mono<ResponseMessageItem> =
-        paymentNotificationMessageDaoService.removeById(request.chatId)
+        paymentNotificationMessageDaoService.removeByIdSafe(request.chatId)
             .map { notificationMessageService.deleteMessage(request.messageId) }
 
     /**
      * Удаляет напоминания об оплате (по планировщику).
      */
     fun deletePaymentNotifications(): Mono<List<Pair<Long, ResponseMessageItem>>> =
-        paymentNotificationMessageDaoService.removeAll()
+        paymentNotificationMessageDaoService.removeAllSafe()
             .map { entities ->
                 entities.map { e ->
                     Pair(

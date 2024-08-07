@@ -11,7 +11,8 @@ data class BotProperties(
     var webClient: WebClientProperties = WebClientProperties(),
     var errorGroupNotification: ErrorGroupNotificationProperties = ErrorGroupNotificationProperties(),
     var paymentNotification: PaymentNotificationProperties = PaymentNotificationProperties(),
-    var cache: CacheProperties = CacheProperties()
+    var cache: CacheProperties = CacheProperties(),
+    var yookassaPayment: YookassaPaymentProperties = YookassaPaymentProperties()
 ) {
 
     data class WebClientProperties(
@@ -39,6 +40,16 @@ data class BotProperties(
     )
 
     data class CacheProperties(
-        var sbssKnowledgeExpiredHours: Long = 24
+        var sbssKnowledgeExpiredHours: Long = 24L
+    )
+
+    data class YookassaPaymentProperties(
+        var returnUrl: String? = null,
+        var scheme: String? = "https",
+        var host: String = "api.yookassa.ru",
+        var port: String? = "443",
+        var path: String? = "v3/payments",
+        var shopId: String? = null,
+        var secretKey: String? = null
     )
 }

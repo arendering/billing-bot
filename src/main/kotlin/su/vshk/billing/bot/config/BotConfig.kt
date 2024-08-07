@@ -7,6 +7,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.netty.channel.ChannelOption
 import io.netty.handler.logging.LogLevel
+import io.netty.handler.ssl.SslContext
+import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import org.springframework.context.annotation.Bean
@@ -59,6 +62,7 @@ class BotConfig {
 
         val httpClient = HttpClient
             .from(tcpClient) //TODO: refactoring
+            .secure { sslContextSpec -> sslContextSpec.sslContext(getTrustAllSslContext()) }
             .wiretap("reactor.netty.http.client.HttpClient", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)
 
         return WebClient.builder()
@@ -74,4 +78,15 @@ class BotConfig {
         source.setDefaultEncoding("UTF-8")
         return source
     }
+
+    //TODO: рефакторинг, не рекомендовано использовать в продуктовой среде
+    private fun getTrustAllSslContext(): SslContext =
+        try {
+            SslContextBuilder
+                .forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build()
+        } catch (th: Throwable) {
+            throw RuntimeException("unable to create web client SSL context", th)
+        }
 }

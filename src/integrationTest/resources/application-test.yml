@@ -8,6 +8,9 @@ bot:
   error-group-notification:
     enabled: true
     chat-id: -101909
+  yookassa-payment:
+    shop-id: 1234
+    secret-key: secret
 
 spring:
   datasource:
