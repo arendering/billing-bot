@@ -9,7 +9,7 @@ class PhoneNormalizer private constructor() {
          * Нормализует номер телефона из биллинга в формат Юкассы.
          */
         fun normalizeForYookassa(phone: String?): String? {
-            logger.debug("try to normalize phone '$phone'")
+            logger.debug("Try to normalize phone '$phone'")
 
             val normalized =
                 if (phone?.first() == '+') {
@@ -18,7 +18,7 @@ class PhoneNormalizer private constructor() {
                     phone
                 }
 
-            logger.debug("normalized phone '$normalized'")
+            logger.debug("Normalized phone '$normalized'")
 
             return normalized
         }

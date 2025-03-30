@@ -12,6 +12,7 @@ import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.message.response.NotificationMessageService
 import su.vshk.billing.bot.service.VgroupsService
+import su.vshk.billing.bot.util.InternalException
 
 @Component
 class NotificationStateTransformer(
@@ -29,7 +30,6 @@ class NotificationStateTransformer(
                 DialogState(
                     command = getCommand(),
                     options = NotificationOptions(),
-                    steps = listOf(NotificationStep.SWITCH),
                     response = DialogState.Response.next(responseMessageItem)
                 )
             }
@@ -38,7 +38,7 @@ class NotificationStateTransformer(
         Mono.fromCallable {
             when (val step = state.currentStep()) {
                 NotificationStep.SWITCH -> addSwitchOption(state = state, option = request.input)
-                else -> throw IllegalStateException("unknown step: '$step'")
+                else -> throw InternalException("unknown step: '$step' for command ${getCommand().value}")
             }
         }
 
@@ -67,7 +67,7 @@ class NotificationStateTransformer(
                             !isNotificationEnabled && !userHasSingleAgreement ->
                                 notificationMessageService.enableForSingleAgreementOrEnableForAllAgreements()
 
-                            else -> throw IllegalStateException("unreachable code")
+                            else -> throw InternalException("unsupported notification parameter combination")
                         }
                     }
             }

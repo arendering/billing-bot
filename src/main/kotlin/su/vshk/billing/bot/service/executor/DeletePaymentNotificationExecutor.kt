@@ -6,22 +6,22 @@ import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
-import su.vshk.billing.bot.message.response.CommonMessageService
+import su.vshk.billing.bot.service.PaymentNotificationService
 import su.vshk.billing.bot.util.getLogger
 
 @Service
-class MenuExecutor(
-    private val commonMessageService: CommonMessageService
+class DeletePaymentNotificationExecutor(
+    private val paymentNotificationService: PaymentNotificationService
 ): CommandExecutor {
 
     private val logger = getLogger()
 
     override fun getCommand(): Command =
-        Command.MENU
+        Command.DELETE_PAYMENT_NOTIFICATION
 
     override fun execute(request: RequestMessageItem, user: UserEntity?, options: Any?): Mono<ResponseMessageItem> =
-        Mono.fromCallable {
+        Mono.defer {
             logger.debug("Try to execute command '${getCommand().value}'")
-            commonMessageService.showMainMenu()
+            paymentNotificationService.deletePaymentNotification(request)
         }
 }

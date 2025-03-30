@@ -23,7 +23,8 @@ class SbssTariffParser private constructor() {
                     .associate { it.first to it.second }
                     .let { values ->
                         Tariff(
-                            id = values["tarid"]?.toLong() ?: throw RuntimeException("key 'tarid' not found in raw tariff text'$raw'"),
+                            id = values["tarid"]?.toLong()
+                                ?: throw GetSbssKnowledgeBadResponseException("key 'tarid' not found in raw tariff text '$raw'"),
                             type = values["type"],
                             name = values["name"],
                             speed = values["speed"],
@@ -32,7 +33,7 @@ class SbssTariffParser private constructor() {
                         )
                     }
             } catch (th: Throwable) {
-                logger.error("unable to parse tariff: '$raw'", th)
+                logger.error("Unable to parse tariff: '$raw'", th)
                 null
             }
     }

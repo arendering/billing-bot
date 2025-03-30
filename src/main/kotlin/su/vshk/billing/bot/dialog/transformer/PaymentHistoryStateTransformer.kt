@@ -11,6 +11,8 @@ import su.vshk.billing.bot.dialog.option.PaymentHistoryPeriod
 import su.vshk.billing.bot.dialog.step.PaymentHistoryStep
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.response.PaymentHistoryMessageService
+import su.vshk.billing.bot.util.InternalException
+import su.vshk.billing.bot.util.UnexpectedDialogOptionException
 
 @Component
 class PaymentHistoryStateTransformer(
@@ -25,7 +27,6 @@ class PaymentHistoryStateTransformer(
             DialogState(
                 command = getCommand(),
                 options = PaymentHistoryOptions(),
-                steps = listOf(PaymentHistoryStep.PERIOD),
                 response = DialogState.Response.next(paymentHistoryMessageService.showHistoryPeriods())
             )
         }
@@ -34,7 +35,7 @@ class PaymentHistoryStateTransformer(
         Mono.fromCallable {
             when (val step = state.currentStep()) {
                 PaymentHistoryStep.PERIOD -> addPeriodToOptions(state = state, option = request.input)
-                else -> throw IllegalStateException("unknown step: '$step'")
+                else -> throw InternalException("unknown step: '$step' for command ${getCommand().value}")
             }
         }
 
@@ -51,7 +52,7 @@ class PaymentHistoryStateTransformer(
                 state.finish(options.copy(period = PaymentHistoryPeriod.SIX_MONTHS))
 
             else ->
-                throw RuntimeException("step ${state.currentStep()}: unexpected option '$option'")
+                throw UnexpectedDialogOptionException(option = option, command = getCommand().value, step = state.currentStep())
         }
     }
 }

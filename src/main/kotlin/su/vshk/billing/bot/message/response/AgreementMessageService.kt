@@ -3,15 +3,14 @@ package su.vshk.billing.bot.message.response
 import org.springframework.context.MessageSource
 import org.springframework.stereotype.Service
 import su.vshk.billing.bot.dao.model.BlockedStatus
-import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dialog.option.AgreementAvailableOptions
-import su.vshk.billing.bot.dialog.option.GenericAvailableOptions
 import su.vshk.billing.bot.message.HtmlMarkupFormatter
 import su.vshk.billing.bot.message.TextType
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.service.dto.AgreementDto
 import su.vshk.billing.bot.service.dto.InfoDto
 import su.vshk.billing.bot.util.AmountUtils
+import su.vshk.billing.bot.util.InternalException
 import java.math.BigDecimal
 
 @Service
@@ -47,7 +46,7 @@ class AgreementMessageService(
      */
     fun showAgreements(agreements: List<AgreementDto>, actualAgreementId: Long): ResponseMessageItem {
         val actualAgreement = agreements.find { it.agreementId == actualAgreementId }
-            ?: throw RuntimeException("actual agreement not found by agreementId '$actualAgreementId'")
+            ?: throw InternalException("agreement not found by agreementId '$actualAgreementId'")
 
         val otherAgreements = agreements.filterNot { it.agreementId == actualAgreementId }
 
@@ -125,16 +124,16 @@ class AgreementMessageService(
         if (blocked == BlockedStatus.ACTIVE) {
             getText("agreements.info.blocked.active.emoji")
         } else {
-            getText("agreement.info.blocked.not.active.emoji")
+            getText("agreements.info.blocked.not.active.emoji")
         }
 
     private fun resolveBlockedNotice(blocked: Long): String? =
         when (blocked) {
-            in BlockedStatus.BALANCE -> getText("agreement.info.blocked.balance.notice")
-            BlockedStatus.USER_BLOCK -> getText("agreement.info.blocked.user.notice")
-            BlockedStatus.ADMIN_BLOCK -> getText("agreement.info.blocked.admin.notice")
-            BlockedStatus.TRAFFIC_LIMIT -> getText("agreement.info.blocked.traffic.limit.notice")
-            BlockedStatus.DISABLED -> getText("agreement.info.blocked.disabled.notice")
+            in BlockedStatus.BALANCE -> getText("agreements.info.blocked.balance.notice")
+            BlockedStatus.USER_BLOCK -> getText("agreements.info.blocked.user.notice")
+            BlockedStatus.ADMIN_BLOCK -> getText("agreements.info.blocked.admin.notice")
+            BlockedStatus.TRAFFIC_LIMIT -> getText("agreements.info.blocked.traffic.limit.notice")
+            BlockedStatus.DISABLED -> getText("agreements.info.blocked.disabled.notice")
             else -> null
         }
 

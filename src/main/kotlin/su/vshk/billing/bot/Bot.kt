@@ -10,6 +10,7 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.config.BotProperties
+import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.message.*
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
@@ -25,9 +26,7 @@ class Bot(
     private val postProcessorService: PostProcessorService
 ): TelegramLongPollingBot() {
 
-    companion object {
-        private val log = getLogger()
-    }
+    private val logger = getLogger()
 
     override fun getBotToken(): String =
         properties.token!!
@@ -42,10 +41,7 @@ class Bot(
         resolveUserInput(update)
             ?.let { filterGroupMessage(it) }
             ?.let { request ->
-                processorService.process(request)
-                    .flatMap { sendResponse(chatId = request.chatId, requestMessageId = request.messageId, responseMessageItem = it) }
-                    .flatMap { postProcessorService.postProcess(request = request, response = it) }
-                    .putTraceId()
+                runWithMdcContext(rx = processRequest(request))
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe()
             }
@@ -73,6 +69,7 @@ class Bot(
                     isButtonUpdate = false,
                     chatId = inputMessage.chatId,
                     input = inputMessage.text,
+                    command = Command.get(inputMessage.text),
                     messageId = inputMessage.messageId
                 )
             }
@@ -84,6 +81,7 @@ class Bot(
                     isButtonUpdate = true,
                     chatId = inputCallback.message.chatId,
                     input = inputCallback.data,
+                    command = Command.get(inputCallback.data),
                     messageId = inputCallback.message?.messageId!!
                 )
             }
@@ -96,6 +94,11 @@ class Bot(
      */
     private fun filterGroupMessage(request: RequestMessageItem): RequestMessageItem? =
         if (request.chatId < 0) null else request
+
+    private fun processRequest(request: RequestMessageItem): Mono<Unit> =
+        processorService.process(request)
+            .flatMap { sendResponse(chatId = request.chatId, requestMessageId = request.messageId, responseMessageItem = it) }
+            .flatMap { postProcessorService.postProcess(request = request, response = it) }
 
     private fun tryToDeleteMessages(chatId: Long, responseMessageItem: ResponseMessageItem): Mono<ResponseMessageItem> =
         if (responseMessageItem.meta.deleteMessages.active) {
@@ -116,7 +119,7 @@ class Bot(
 
     private fun tryToNotifyErrorGroup(responseMessageItem: ResponseMessageItem): Mono<ResponseMessageItem> =
         if (responseMessageItem.meta.notifyErrorGroup.active) {
-            Mono.deferContextual { contextView -> sendTraceIdToErrorGroup(contextView.traceId)}
+            Mono.deferContextual { contextView -> sendTraceIdToErrorGroup(contextView.botTraceId)}
                 .map { responseMessageItem }
         } else {
             responseMessageItem.toMono()
@@ -138,50 +141,46 @@ class Bot(
 
     // Сделан публичным для того, чтобы мокать в тестах
     fun editMessage(telegramId: Long, messageId: Int, content: ResponseMessageItem.Content): Mono<Unit> =
-        Mono.deferContextual { contextView ->
-            Mono
-                .fromCallable {
-                    try {
-                        execute(
-                            TelegramMessageBuilder.editMessage(
-                                telegramId = telegramId,
-                                messageId = messageId,
-                                content = content
-                            )
-                        )
-                    } catch (ex: TelegramApiException) {
-                        when {
-                            ex.isMessageNotModified() -> {}
-                            else -> {
-                                log.errorTraceId(context = contextView, msg = "edit message error", ex = ex)
-                                throw ex
-                            }
-                        }
-                    }
-                }
-                .then(Mono.empty())
-        }
-
-    // Сделан публичным для того, чтобы мокать в тестах
-    fun sendMessage(chatId: Long, content: ResponseMessageItem.Content): Mono<Message> =
-        Mono.deferContextual { contextView ->
-            Mono.fromCallable {
+        Mono
+            .fromCallable {
                 try {
                     execute(
-                        TelegramMessageBuilder.createMessage(
-                            telegramId = chatId,
+                        TelegramMessageBuilder.editMessage(
+                            telegramId = telegramId,
+                            messageId = messageId,
                             content = content
                         )
                     )
-                } catch (ex: Throwable) {
-                    log.errorTraceId(context = contextView, msg = "send message error", ex = ex)
-                    throw ex
+                } catch (ex: TelegramApiException) {
+                    when {
+                        ex.isMessageNotModified() -> {}
+                        else -> {
+                            logger.error("Edit message error", ex)
+                            throw ex
+                        }
+                    }
                 }
+            }
+            .then(Mono.empty())
+
+    // Сделан публичным для того, чтобы мокать в тестах
+    fun sendMessage(chatId: Long, content: ResponseMessageItem.Content): Mono<Message> =
+        Mono.fromCallable {
+            try {
+                execute(
+                    TelegramMessageBuilder.createMessage(
+                        telegramId = chatId,
+                        content = content
+                    )
+                )
+            } catch (ex: Throwable) {
+                logger.error("Send message error", ex)
+                throw ex
             }
         }
 
-    private fun sendTraceIdToErrorGroup(traceId: String): Mono<Optional<Message>> =
-        if (properties.errorGroupNotification.enabled) {
+    private fun sendTraceIdToErrorGroup(traceId: String?): Mono<Optional<Message>> =
+        if (properties.errorGroupNotification.enabled && !traceId.isNullOrEmpty()) {
             sendMessage(
                 chatId = properties.errorGroupNotification.chatId!!,
                 content = ResponseMessageItem.Content(
@@ -194,21 +193,19 @@ class Bot(
         }
 
     private fun doDeleteMessage(telegramId: Long, messageId: Int): Mono<Unit> =
-        Mono.deferContextual { contextView ->
-            Mono
-                .fromCallable {
-                    try {
-                        execute(
-                            TelegramMessageBuilder.deleteMessage(
-                                telegramId = telegramId,
-                                messageId = messageId
-                            )
+        Mono
+            .fromCallable {
+                try {
+                    execute(
+                        TelegramMessageBuilder.deleteMessage(
+                            telegramId = telegramId,
+                            messageId = messageId
                         )
-                    } catch (ex: Throwable) {
-                        log.errorTraceId(context = contextView, msg = "delete message error", ex = ex)
-                        throw ex
-                    }
+                    )
+                } catch (ex: Throwable) {
+                    logger.error("Delete message error", ex)
+                    throw ex
                 }
-                .then(Mono.empty())
-        }
+            }
+            .then(Mono.empty())
 }

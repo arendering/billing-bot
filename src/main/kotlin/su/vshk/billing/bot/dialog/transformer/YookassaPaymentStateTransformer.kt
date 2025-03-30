@@ -14,8 +14,7 @@ import su.vshk.billing.bot.message.response.YookassaPaymentMessageService
 import su.vshk.billing.bot.service.AccountService
 import su.vshk.billing.bot.service.CalculatorService
 import su.vshk.billing.bot.service.RecommendedPaymentService
-import su.vshk.billing.bot.util.AmountUtils
-import su.vshk.billing.bot.util.PhoneNormalizer
+import su.vshk.billing.bot.util.*
 import su.vshk.billing.bot.web.dto.manager.Account
 import su.vshk.billing.bot.web.dto.yookassa.YookassaPaymentReceiptCustomer
 
@@ -40,7 +39,6 @@ class YookassaPaymentStateTransformer(
                             DialogState(
                                 command = getCommand(),
                                 options = YookassaPaymentOptions(customer = account.resolveCustomer()),
-                                steps = listOf(YookassaPaymentStep.AMOUNT),
                                 response = DialogState.Response.next(responseMessage)
                             )
                         }
@@ -55,12 +53,12 @@ class YookassaPaymentStateTransformer(
     override fun processOption(request: RequestMessageItem, user: UserEntity, state: DialogState): Mono<DialogState> =
         when (val step = state.currentStep()) {
             YookassaPaymentStep.AMOUNT -> processAmountStep(user, state, request.input).toMono()
-            else -> throw IllegalStateException("unknown step: '$step'")
+            else -> throw InternalException("unknown step: '$step' for command ${getCommand().value}")
         }
 
     private fun getAccount(user: UserEntity): Mono<Account> =
         accountService.getAccount(user.userId!!)
-            .map { it.account ?: throw RuntimeException("account not found for user $user") }
+            .map { it.account ?: throw GetAccountBadResponseException("account not found for user ${user.telegramId}") }
 
     private fun getActualRecommendedPayment(user: UserEntity): Mono<Int> =
         recommendedPaymentService.getActual(user.agreementId!!)
@@ -78,7 +76,7 @@ class YookassaPaymentStateTransformer(
                 val updatedOptions = (state.options as YookassaPaymentOptions).copy(amount = dto.amount)
                 state.finish(updatedOptions)
             }
-            else -> throw RuntimeException("inconsistent calculator dto $dto")
+            else -> throw CalculatorException("inconsistent calculator dto $dto")
         }
     }
 

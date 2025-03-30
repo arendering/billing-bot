@@ -11,8 +11,6 @@ import org.mockito.Mockito.times
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import reactor.kotlin.test.test
-import su.vshk.billing.bot.util.WebUtils
-import su.vshk.billing.bot.util.putTraceId
 
 class WebUtilsTest {
 
@@ -23,7 +21,6 @@ class WebUtilsTest {
         mockTestClient()
 
         WebUtils.retryIfAuthFailedExecute { testClient.doRequest() }
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.fault).isNull()

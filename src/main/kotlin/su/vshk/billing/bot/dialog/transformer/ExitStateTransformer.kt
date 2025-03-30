@@ -9,6 +9,8 @@ import su.vshk.billing.bot.dialog.option.ExitAvailableOptions
 import su.vshk.billing.bot.dialog.step.ExitStep
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.response.LogoutMessageService
+import su.vshk.billing.bot.util.InternalException
+import su.vshk.billing.bot.util.UnexpectedDialogOptionException
 
 @Component
 class ExitStateTransformer(
@@ -22,7 +24,6 @@ class ExitStateTransformer(
         Mono.fromCallable {
             DialogState(
                 command = getCommand(),
-                steps = listOf(ExitStep.WARNING),
                 response = DialogState.Response.next(logoutMessageService.showWarning()),
             )
         }
@@ -31,7 +32,7 @@ class ExitStateTransformer(
         Mono.fromCallable {
             when (val step = state.currentStep()) {
                 ExitStep.WARNING -> processWarningOption(state = state, option = request.input)
-                else -> throw IllegalStateException("unknown step: '$step'")
+                else -> throw InternalException("unknown step: '$step' for command ${getCommand().value}")
             }
         }
 
@@ -39,6 +40,6 @@ class ExitStateTransformer(
         if (option == ExitAvailableOptions.YES) {
             state.finish(null)
         } else {
-            throw RuntimeException("step ${state.currentStep()}: unexpected option '$option'")
+            throw UnexpectedDialogOptionException(option = option, command = getCommand().value, step = state.currentStep())
         }
 }

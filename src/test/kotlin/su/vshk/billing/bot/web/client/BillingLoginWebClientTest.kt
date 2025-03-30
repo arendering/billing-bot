@@ -2,7 +2,6 @@ package su.vshk.billing.bot.web.client
 
 import com.nhaarman.mockitokotlin2.*
 import org.assertj.core.api.Assertions.assertThat
-import su.vshk.billing.bot.util.putTraceId
 import su.vshk.billing.bot.web.converter.RequestConverter
 import su.vshk.billing.bot.web.converter.ResponseConverter
 import su.vshk.billing.bot.web.dto.client.ClientLoginRequest
@@ -95,7 +94,6 @@ class BillingLoginWebClientTest {
         val request = ClientLoginRequest(login = "user", password = "1234")
 
         subj.clientLogin(request)
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.isPresent).isTrue
@@ -152,7 +150,6 @@ class BillingLoginWebClientTest {
         val request = ClientLoginRequest(login = "user", password = "1234")
 
         subj.getClientCookie(request = request)
-            .putTraceId()
             .test()
             .expectNextMatches {
                 val cookie = it.get()
@@ -197,7 +194,6 @@ class BillingLoginWebClientTest {
         mockManagerConvertResponse()
 
         subj.getManagerCookie()
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.value).isEqualTo("1234abcd")

@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import reactor.kotlin.test.test
-import su.vshk.billing.bot.util.putTraceId
 import su.vshk.billing.bot.web.dto.Cookie
 import java.time.Instant
 
@@ -20,7 +19,6 @@ class CookieManagerTest {
     fun testClientCookie() {
         val userId = 13L
         cookieManager.getClientCookie(userId)
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.isEmpty).isTrue
@@ -36,7 +34,6 @@ class CookieManagerTest {
                     expTimestampSeconds = Instant.now().epochSecond.plus(20)
                 )
             )
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it).isEqualTo("abc123")
@@ -45,7 +42,6 @@ class CookieManagerTest {
             .verifyComplete()
 
         cookieManager.getClientCookie(userId)
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.isPresent).isTrue
@@ -58,7 +54,6 @@ class CookieManagerTest {
     @Test
     fun testManagerCookie() {
         cookieManager.getManagerCookie()
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.isEmpty).isTrue
@@ -73,7 +68,6 @@ class CookieManagerTest {
                     expTimestampSeconds = Instant.now().epochSecond.plus(20)
                 )
             )
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it).isEqualTo("abc123")
@@ -82,7 +76,6 @@ class CookieManagerTest {
             .verifyComplete()
 
         cookieManager.getManagerCookie()
-            .putTraceId()
             .test()
             .expectNextMatches {
                 assertThat(it.isPresent).isTrue

@@ -6,11 +6,11 @@ import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dialog.option.YookassaPaymentOptions
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.message.response.YookassaPaymentMessageService
 import su.vshk.billing.bot.service.VgroupsService
-import su.vshk.billing.bot.util.debugTraceId
-import su.vshk.billing.bot.util.getLogger
+import su.vshk.billing.bot.util.*
 import su.vshk.billing.bot.web.client.BillingWebClient
 import su.vshk.billing.bot.web.client.YookassaWebClient
 import su.vshk.billing.bot.web.dto.manager.InsertPrePaymentRequest
@@ -31,12 +31,12 @@ class YookassaPaymentExecutor(
     override fun getCommand(): Command =
         Command.YOOKASSA_PAYMENT
 
-    override fun execute(user: UserEntity, options: Any?): Mono<ResponseMessageItem> =
-        Mono.deferContextual { context ->
+    override fun execute(request: RequestMessageItem, user: UserEntity?, options: Any?): Mono<ResponseMessageItem> =
+        Mono.defer {
             options as YookassaPaymentOptions
-            logger.debugTraceId(context, "try to execute command '${getCommand().value}' with options: $options")
+            logger.debug("Try to execute command '${getCommand().value}' with options: $options")
 
-            getAgreementNumber(user)
+            getAgreementNumber(user!!)
                 .flatMap { agreementNumber ->
                     insertPrePayment(user = user, amount = options.amount!!)
                         .flatMap { prePaymentId ->
@@ -50,7 +50,7 @@ class YookassaPaymentExecutor(
         vgroupsService.getInternetVgroups(user.userId!!)
             .map { vgroups ->
                 vgroups.find { it.agreementId == user.agreementId }?.agreementNumber
-                    ?: throw RuntimeException("agreementNumber not found for user $user")
+                    ?: throw GetVgroupsBadResponseException("agreementNumber not found for user $user")
             }
 
     private fun insertPrePayment(user: UserEntity, amount: Int): Mono<Long> =
@@ -63,7 +63,7 @@ class YookassaPaymentExecutor(
                     )
                 )
             )
-            .map { it.prePaymentId ?: throw RuntimeException("prePaymentId is null") }
+            .map { it.prePaymentId ?: throw InsertPrePaymentBadResponseException("prePaymentId is null") }
 
     private fun createYookassaPayment(prePaymentId: Long, agreementNumber: String, options: YookassaPaymentOptions): Mono<String> =
         yookassaWebClient
@@ -104,5 +104,8 @@ class YookassaPaymentExecutor(
                     )
                 )
             )
-            .map { it.confirmation?.confirmationUrl ?: throw RuntimeException("confirmation.confirmationUrl is null") }
+            .map {
+                it.confirmation?.confirmationUrl
+                    ?: throw YookassaCreatePaymentBadResponseException("confirmation.confirmationUrl is null")
+            }
 }
