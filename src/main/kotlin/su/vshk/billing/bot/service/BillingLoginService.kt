@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.dao.model.UserEntity
+import su.vshk.billing.bot.util.GetAccountBadResponseException
 import su.vshk.billing.bot.util.WebUtils
 import su.vshk.billing.bot.web.client.BillingCredentialsWebClient
 import su.vshk.billing.bot.web.client.BillingLoginWebClient
@@ -86,6 +87,6 @@ class BillingLoginService(
             }
             .map {
                 it.data?.ret?.account?.password
-                    ?: throw RuntimeException("actual password is null")
+                    ?: throw GetAccountBadResponseException("actual password is null")
             }
 }

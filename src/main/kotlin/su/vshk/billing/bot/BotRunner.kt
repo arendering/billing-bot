@@ -14,16 +14,13 @@ class BotRunner(
     private val bot: Bot
 ): CommandLineRunner {
 
-    companion object {
-        private val log = getLogger()
-    }
+    private val logger = getLogger()
 
     override fun run(vararg args: String?) {
         try {
-            val botsApi = TelegramBotsApi(DefaultBotSession::class.java)
-            botsApi.registerBot(bot)
+            TelegramBotsApi(DefaultBotSession::class.java).registerBot(bot)
         } catch (ex: TelegramApiException) {
-            log.error("bot start error", ex)
+            logger.error("Unable to register bot", ex)
         }
     }
 }

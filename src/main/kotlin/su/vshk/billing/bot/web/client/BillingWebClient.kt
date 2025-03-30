@@ -6,6 +6,7 @@ import reactor.core.publisher.Mono
 import su.vshk.billing.bot.config.BotProperties
 import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.service.BillingLoginService
+import su.vshk.billing.bot.util.BillingBadResponseException
 import su.vshk.billing.bot.util.WebUtils
 import su.vshk.billing.bot.web.converter.RequestConverter
 import su.vshk.billing.bot.web.converter.ResponseConverter
@@ -128,6 +129,22 @@ class BillingWebClient(
                 }
         }.map { unwrapData(it) }
 
+    /**
+     * Сохраняет предварительный платеж
+     */
+    fun insertPrePayment(request: InsertPrePaymentRequest): Mono<InsertPrePaymentResponse> =
+        WebUtils.retryIfAuthFailedExecute {
+            billingLoginService.getManagerCookie()
+                .flatMap {
+                    doRequest(
+                        method = BillingMethod.INSERT_PRE_PAYMENT,
+                        cookie = it,
+                        request = request,
+                        responseClazz = InsertPrePaymentResponse::class.java
+                    )
+                }
+        }.map { unwrapData(it) }
+
     private fun <Req, Resp> doRequest(
         method: String,
         cookie: String,
@@ -144,7 +161,7 @@ class BillingWebClient(
         responseClazz: Class<T>
     ): BillingResponseItem<T> {
         val httpBody = responseData.body
-            ?: throw RuntimeException("http body is null")
+            ?: throw BillingBadResponseException("http body is null")
 
         return if (responseData.status?.is2xxSuccessful == true) {
             BillingResponseItem(
@@ -157,8 +174,8 @@ class BillingWebClient(
 
     private fun <T> unwrapData(responseItem: BillingResponseItem<T>): T =
         if (responseItem.isFault()) {
-            throw RuntimeException("get fault response")
+            throw BillingBadResponseException("get fault response")
         } else {
-            responseItem.data ?: throw RuntimeException("response data is null")
+            responseItem.data ?: throw BillingBadResponseException("response data is null")
         }
 }

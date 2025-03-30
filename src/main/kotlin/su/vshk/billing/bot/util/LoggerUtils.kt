@@ -2,41 +2,26 @@ package su.vshk.billing.bot.util
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
+import org.slf4j.MDC
 import reactor.core.publisher.Mono
 import reactor.util.context.ContextView
 import java.util.*
 
-const val TRACE_ID_KEY = "traceId"
+const val BOT_TRACE_ID_KEY = "bot-trace-id"
 
 inline fun <reified C : Any> C.getLogger(): Logger =
     LoggerFactory.getLogger(this::class.java.name.substringBefore("\$Companion"))
 
-val ContextView.traceId: String get() =
-    this[TRACE_ID_KEY]
+fun <T> runWithMdcContext(
+    botTraceId: String? = UUID.randomUUID().toString(),
+    rx: Mono<T>
+): Mono<T> =
+    Mono
+        .deferContextual { context ->
+            MDC.put(BOT_TRACE_ID_KEY, context.botTraceId)
+            rx
+        }
+        .contextWrite { it.put(BOT_TRACE_ID_KEY, botTraceId ?: UUID.randomUUID().toString()) }
 
-fun <T> Mono<T>.putTraceId(traceId: String? = null): Mono<T> =
-    this.contextWrite { it.put(TRACE_ID_KEY, traceId ?: UUID.randomUUID().toString()) }
-
-fun <T> Flux<T>.putTraceId(): Flux<T> =
-    this.contextWrite { it.put(TRACE_ID_KEY, UUID.randomUUID().toString()) }
-
-fun Logger.debugTraceId(context: ContextView, msg: String) {
-    this.debug("$TRACE_ID_KEY: '${context.traceId}' - $msg")
-}
-
-fun Logger.infoTraceId(context: ContextView, msg: String) {
-    this.info("$TRACE_ID_KEY: '${context.traceId}' - $msg")
-}
-
-fun Logger.warnTraceId(context: ContextView, msg: String) {
-    this.warn("$TRACE_ID_KEY: '${context.traceId}' - $msg")
-}
-
-fun Logger.errorTraceId(context: ContextView, msg: String, ex: Throwable) {
-    this.error("$TRACE_ID_KEY: '${context.traceId}' - $msg", ex)
-}
-
-fun Logger.errorTraceId(context: ContextView, msg: String) {
-    this.error("$TRACE_ID_KEY: '${context.traceId}' - $msg")
-}
+val ContextView.botTraceId: String? get() =
+    this.getOrDefault<String>(BOT_TRACE_ID_KEY, null)

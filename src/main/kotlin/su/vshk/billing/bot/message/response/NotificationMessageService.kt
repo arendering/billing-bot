@@ -2,7 +2,7 @@ package su.vshk.billing.bot.message.response
 
 import org.springframework.context.MessageSource
 import org.springframework.stereotype.Service
-import su.vshk.billing.bot.dao.model.GenericCommand
+import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dialog.option.NotificationAvailableOptions
 import su.vshk.billing.bot.message.HtmlMarkupFormatter
 import su.vshk.billing.bot.message.TextType
@@ -297,7 +297,7 @@ class NotificationMessageService(
             listOf(
                 ResponseMessageItem.InlineKeyboardItem(
                     label = getText("notification.understand"),
-                    callbackData = GenericCommand.DELETE_PAYMENT_NOTIFICATION
+                    callbackData = Command.DELETE_PAYMENT_NOTIFICATION.value
                 )
             )
         )

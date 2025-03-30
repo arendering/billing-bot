@@ -6,15 +6,21 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import su.vshk.billing.bot.dao.model.EnabledNotificationUserDto
+import su.vshk.billing.bot.util.getLogger
 import java.util.*
 
 @Service
 class UserDaoService(
     private val userRepository: UserRepository
 ) {
+
+    private val logger = getLogger()
+
     fun findUser(telegramId: Long): Mono<Optional<UserEntity>> =
         Mono.fromCallable {
-            userRepository.findById(telegramId)
+            val user = userRepository.findById(telegramId)
+            logger.debug("DAO findUser, found user ${user.orElse(null)}")
+            user
         }.subscribeOn(Schedulers.boundedElastic())
 
     fun saveUser(
@@ -24,26 +30,32 @@ class UserDaoService(
         agreementId: Long
     ): Mono<UserEntity> =
         Mono.fromCallable {
-            UserEntity(
-                telegramId = telegramId,
-                userId = userId,
-                login = login,
-                agreementId = agreementId
-            ).let { userRepository.save(it) }
+            val user = UserEntity(telegramId = telegramId, userId = userId, login = login, agreementId = agreementId)
+            logger.debug("DAO saveUser, saved user $user")
+            userRepository.save(user)
         }.subscribeOn(Schedulers.boundedElastic())
 
     fun updateUser(updated: UserEntity): Mono<UserEntity> =
         Mono.fromCallable {
+            logger.debug("DAO updateUser, updated user $updated")
             userRepository.save(updated)
         }.subscribeOn(Schedulers.boundedElastic())
 
     fun deleteUser(telegramId: Long): Mono<Unit> =
-        Mono.fromCallable {
-            userRepository.deleteById(telegramId)
-        }.subscribeOn(Schedulers.boundedElastic())
+        findUser(telegramId)
+            .flatMap { userOpt ->
+                val user = userOpt.get()
+                logger.debug("DAO deleteUser, deleted user $user")
+                doDeleteUser(user)
+            }
 
     fun findUsersEnabledNotification(): Mono<List<EnabledNotificationUserDto>> =
         Mono.fromCallable {
             userRepository.findUsersEnabledNotification()
+        }.subscribeOn(Schedulers.boundedElastic())
+
+    private fun doDeleteUser(user: UserEntity): Mono<Unit> =
+        Mono.fromCallable {
+            userRepository.delete(user)
         }.subscribeOn(Schedulers.boundedElastic())
 }

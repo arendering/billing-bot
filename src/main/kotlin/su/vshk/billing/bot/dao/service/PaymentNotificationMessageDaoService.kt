@@ -18,7 +18,7 @@ class PaymentNotificationMessageDaoService(
             paymentNotificationMessageRepository.saveAll(entities)
         }.subscribeOn(Schedulers.boundedElastic())
 
-    fun removeAll(): Mono<List<PaymentNotificationMessageEntity>> =
+    fun removeAllSafe(): Mono<List<PaymentNotificationMessageEntity>> =
         Mono.fromCallable { paymentNotificationMessageRepository.findAll() }
             .subscribeOn(Schedulers.boundedElastic())
             .flatMap { entities ->
@@ -31,7 +31,7 @@ class PaymentNotificationMessageDaoService(
                 }
             }
 
-    fun removeById(telegramId: Long): Mono<Optional<PaymentNotificationMessageEntity>> =
+    fun removeByIdSafe(telegramId: Long): Mono<Optional<PaymentNotificationMessageEntity>> =
         Mono.fromCallable { paymentNotificationMessageRepository.findById(telegramId) }
             .subscribeOn(Schedulers.boundedElastic())
             .flatMap { entityOpt ->

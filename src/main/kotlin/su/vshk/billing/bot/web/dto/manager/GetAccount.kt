@@ -28,7 +28,10 @@ data class Account(
     val password: String? = null,
 
     @JsonProperty("email")
-    val email: String? = null
+    val email: String? = null,
+
+    @JsonProperty("mobile")
+    val mobile: String? = null
 )
 
 data class AccountAgreement(

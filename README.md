@@ -1,4 +1,4 @@
-# billing-bot
+# Billing-bot
 Бот для биллинговой системы ACP LANBilling
 
 ## Зависимости
@@ -15,7 +15,6 @@
 - Запуск интегро-тестов: `$ ./gradlew integrationTest`
 - Сборка артефакта: `$ ./gradlew bootJar`
 - Запуск артефакта: `$ java -Dspring.config.location=/path/to/application.yml -jar /path/to/billing-bot.jar`
-
 
 ## Настроечные ключи
 
@@ -39,4 +38,13 @@
 | bot.payment-notification.billing-request-delay-seconds | 1                     | Задержка в секундах при обращении в биллинг при формировании напоминания                            |
 | bot.error-group-notification.enabled                   | false                 | Включена ли отправка сообщения об ошибке в группу с ошибками                                        |
 | bot.error-group-notification.chat-id                   |                       | ID группы с ошибками                                                                                |
-| bot.cache.sbss-knowledge-expired-hours                 | 24                    | Время жизни кэша для тарифов из базы знаний                                                         |
+| bot.cache.sbss-knowledge-expired-hours                 | 24                    | Время жизни кэша с тарифами из базы знаний биллинга                                                 |
+| bot.yookassa-payment.return-url                        |                       | URL для редиректа после пополнения баланса через Юкассу                                             |
+| bot.yookassa-payment.scheme                            | https                 | Схема подключения в URL к Юкассе                                                                    |
+| bot.yookassa-payment.host                              | api.yookassa.ru       | Хост в URL для платежа Юкассы                                                                       |
+| bot.yookassa-payment.port                              | 443                   | Порт в URL для платежа Юкассы                                                                       |
+| bot.yookassa-payment.path                              | v3/payments           | Путь в URL для платежа Юкассы                                                                       |
+| bot.yookassa-payment.shop-id                           |                       | Идентификатор магазина для авторизации в Юкассе                                                     |
+| bot.yookassa-payment.secret-key                        |                       | Секретный ключ для авторизации в Юкассе                                                             |
+
+

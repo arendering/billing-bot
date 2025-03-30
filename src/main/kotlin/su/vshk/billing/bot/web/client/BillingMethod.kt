@@ -10,5 +10,6 @@ class BillingMethod private constructor() {
         const val CLIENT_PROMISE_PAYMENT = "ClientPromisePayment"
         const val GET_RECOMMENDED_PAYMENT = "getRecommendedPayment"
         const val GET_SBSS_KNOWLEDGE = "getSbssKnowledge"
+        const val INSERT_PRE_PAYMENT = "insPrePayment"
     }
 }

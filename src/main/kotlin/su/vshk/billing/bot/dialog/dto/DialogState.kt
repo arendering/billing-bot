@@ -15,11 +15,6 @@ data class DialogState(
     val options: Any? = null,
 
     /**
-     * Шаги для команды.
-     */
-    val steps: List<String> = emptyList(),
-
-    /**
      * Индекс текущего шага.
      */
     val stepIndex: Int = 0,
@@ -32,7 +27,7 @@ data class DialogState(
     /**
      * Получает текущий шаг диалога.
      */
-    fun currentStep(): String = steps[stepIndex]
+    fun currentStep(): String = command.steps!![stepIndex]
 
     /**
      * Переходит на следующий шаг диалога.

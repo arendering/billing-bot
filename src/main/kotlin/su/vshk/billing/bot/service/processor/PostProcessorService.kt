@@ -2,6 +2,7 @@ package su.vshk.billing.bot.service.processor
 
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.toMono
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dialog.DialogProcessor
 import su.vshk.billing.bot.message.dto.RequestMessageItem
@@ -21,8 +22,8 @@ class PostProcessorService(
         when {
             dialogProcessor.getCommand(request.chatId) == Command.LOGIN ->
                 loginMessageIdService.add(telegramId = request.chatId, messageId = response.meta.sendMessage.messageId!!)
-                    .then(Mono.empty())
+                    .then(Unit.toMono())
 
-            else -> Mono.empty()
+            else -> Unit.toMono()
         }
 }

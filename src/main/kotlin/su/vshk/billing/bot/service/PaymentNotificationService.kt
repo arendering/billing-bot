@@ -15,6 +15,7 @@ import su.vshk.billing.bot.scheduler.PaymentSchedulerPeriod
 import su.vshk.billing.bot.service.dto.PaymentNotificationMessageDto
 import su.vshk.billing.bot.util.*
 import su.vshk.billing.bot.web.dto.manager.GetVgroupsRet
+import java.math.BigDecimal
 
 @Service
 class PaymentNotificationService(
@@ -32,11 +33,9 @@ class PaymentNotificationService(
     fun createPaymentNotification(userDto: EnabledNotificationUserDto, daysToLast: Int): Mono<ResponseMessageItem> =
         Mono
             .defer { doCreatePaymentNotification(userDto = userDto, daysToLast = daysToLast) }
-            .onErrorResume {
-                Mono.deferContextual { context ->
-                    logger.errorTraceId(context, "notification error: ${it.stackTraceToString()}")
-                    notificationMessageService.notifyErrorGroup().toMono()
-                }
+            .onErrorResume { th ->
+                logger.error("Payment notification error: ${th.stackTraceToString()}")
+                notificationMessageService.notifyErrorGroup().toMono()
             }
 
     /**
@@ -57,14 +56,14 @@ class PaymentNotificationService(
      * Удаляет напоминание об оплате (пользователь нажал на кнопку).
      */
     fun deletePaymentNotification(request: RequestMessageItem): Mono<ResponseMessageItem> =
-        paymentNotificationMessageDaoService.removeById(request.chatId)
+        paymentNotificationMessageDaoService.removeByIdSafe(request.chatId)
             .map { notificationMessageService.deleteMessage(request.messageId) }
 
     /**
      * Удаляет напоминания об оплате (по планировщику).
      */
     fun deletePaymentNotifications(): Mono<List<Pair<Long, ResponseMessageItem>>> =
-        paymentNotificationMessageDaoService.removeAll()
+        paymentNotificationMessageDaoService.removeAllSafe()
             .map { entities ->
                 entities.map { e ->
                     Pair(
@@ -77,24 +76,26 @@ class PaymentNotificationService(
     private fun doCreatePaymentNotification(userDto: EnabledNotificationUserDto, daysToLast: Int): Mono<ResponseMessageItem> =
         Mono.deferContextual { context ->
             vgroupsService.getInternetVgroups(userDto.userId)
-                .map { vgroups ->
-                    vgroups.filter(agreementId = userDto.agreementId, notificationType = userDto.notificationType)
-                }
+                .map { vgroups -> vgroups.filter(agreementId = userDto.agreementId, notificationType = userDto.notificationType) }
                 .flatMapMany { Flux.fromIterable(it) }
-                .flatMap({ vgroup ->
-                    recommendedPaymentService.getActual(vgroup.agreementId!!)
-                        .map { Pair(vgroup, it) }
-                        .putTraceId(context.traceId)
-                }, 10) // значение concurrency выбрано произвольно
+                .flatMap(
+                    { vgroup ->
+                        runWithMdcContext(
+                            botTraceId = context.botTraceId,
+                            rx = recommendedPaymentService.getActual(vgroup.agreementId!!).map { Pair(vgroup, it) }
+                        )
+                    },
+                    10
+                )
                 .collectList()
                 .map { pairs ->
                     pairs
                         .map { (vgroup, actualRecommendedPayment) ->
                             PaymentNotificationMessageDto(
                                 address = vgroup.addresses?.firstOrNull()?.address?.let { a -> AddressNormalizer.notificationNormalize(a) }
-                                    ?: throw RuntimeException("addresses is empty or null"),
+                                    ?: throw GetVgroupsBadResponseException("addresses is empty or null"),
                                 balance = vgroup.balance
-                                    ?: throw RuntimeException("balance is null"),
+                                    ?: throw GetVgroupsBadResponseException("balance is null"),
                                 actualRecommendedPayment = actualRecommendedPayment
                             )
                         }
@@ -111,7 +112,7 @@ class PaymentNotificationService(
             PaymentNotificationType.ALL ->
                 this
 
-            else -> throw RuntimeException("unknown notification type: $notificationType")
+            else -> throw InternalException("unknown notification type: $notificationType")
         }
 
     private fun resolveMessage(daysToLast: Int, paymentMessageDtos: List<PaymentNotificationMessageDto>): ResponseMessageItem =
@@ -125,7 +126,7 @@ class PaymentNotificationService(
                 PaymentSchedulerPeriod.FIVE_DAYS ->
                     notificationMessageService.fiveDaysNotification(paymentMessageDtos)
 
-                else -> throw RuntimeException("unknown payment scheduler period '$daysToLast'")
+                else -> throw InternalException("unknown payment scheduler period '$daysToLast'")
             }
         }
 }

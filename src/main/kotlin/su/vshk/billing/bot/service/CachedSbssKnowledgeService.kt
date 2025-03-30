@@ -8,7 +8,6 @@ import su.vshk.billing.bot.service.dto.SbssTariffCacheContext
 import su.vshk.billing.bot.service.dto.Tariff
 import su.vshk.billing.bot.util.SbssTariffParser
 import su.vshk.billing.bot.util.getLogger
-import su.vshk.billing.bot.util.warnTraceId
 import su.vshk.billing.bot.web.client.BillingWebClient
 import su.vshk.billing.bot.web.dto.manager.GetSbssKnowledgeRequest
 
@@ -40,22 +39,20 @@ class CachedSbssKnowledgeService(
         }
 
     private fun getSbssKnowledge(): Mono<Map<Long, Tariff>> =
-        Mono.deferContextual { context ->
-            billingWebClient
-                .getSbssKnowledge(
-                    GetSbssKnowledgeRequest(id = 3)
-                )
-                .map { response ->
-                    val rawTariffs = response.ret?.posts?.mapNotNull { it.post?.text }
+        billingWebClient
+            .getSbssKnowledge(
+                GetSbssKnowledgeRequest(id = 3)
+            )
+            .map { response ->
+                val rawTariffs = response.ret?.posts?.mapNotNull { it.post?.text }
 
-                    if (rawTariffs.isNullOrEmpty()) {
-                        logger.warnTraceId(context, "raw tariffs from sbss knowledge is null or empty")
-                        emptyMap()
-                    } else {
-                        rawTariffs
-                            .mapNotNull { SbssTariffParser.parse(it) }
-                            .associateBy { it.id!! }
-                    }
+                if (rawTariffs.isNullOrEmpty()) {
+                    logger.warn("Raw tariffs from sbss knowledge is null or empty")
+                    emptyMap()
+                } else {
+                    rawTariffs
+                        .mapNotNull { SbssTariffParser.parse(it) }
+                        .associateBy { it.id!! }
                 }
-        }
+            }
 }

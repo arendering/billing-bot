@@ -101,23 +101,13 @@ class HtmlMarkupFormatter {
             }
             ?: this
 
-    //TODO: можно использовать метод ниже
     fun addFormattedText(
         text: String,
         textType: TextType = TextType.PLAIN,
         value: String,
         valueType: TextType = TextType.ITALIC
-    ): HtmlMarkupFormatter {
-        addBreakLineAvailable = true
-        sb.append(
-            doMarkup(
-                text.format(doMarkup(value, valueType)),
-                textType
-            )
-        )
-        sb.append(LINE_SEPARATOR)
-        return this
-    }
+    ): HtmlMarkupFormatter =
+        addFormattedText(textType = textType, text = text, valueType = valueType, values = arrayOf(value))
 
     fun addFormattedText(
         textType: TextType = TextType.PLAIN,

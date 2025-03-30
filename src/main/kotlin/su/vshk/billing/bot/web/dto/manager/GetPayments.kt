@@ -39,12 +39,6 @@ data class GetPaymentsRet(
     val pay: Pay? = null,
 
     /**
-     * ФИО менеджера, который провел платеж
-     */
-    @JsonProperty("mgr")
-    val manager: String? = null,
-
-    /**
      * Описание менеджера, который провел платеж
      */
     @JsonProperty("mgrdescr")

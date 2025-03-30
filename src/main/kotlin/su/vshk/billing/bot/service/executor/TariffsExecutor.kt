@@ -5,13 +5,14 @@ import reactor.core.publisher.Mono
 import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.TariffType
 import su.vshk.billing.bot.dao.model.UserEntity
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.message.response.TariffMessageService
 import su.vshk.billing.bot.service.CachedSbssKnowledgeService
 import su.vshk.billing.bot.service.VgroupsService
 import su.vshk.billing.bot.service.dto.*
 import su.vshk.billing.bot.util.DeprecatedTariffNormalizer
-import su.vshk.billing.bot.util.debugTraceId
+import su.vshk.billing.bot.util.GetVgroupsBadResponseException
 import su.vshk.billing.bot.util.getLogger
 import su.vshk.billing.bot.web.dto.manager.GetVgroupsRet
 
@@ -27,11 +28,11 @@ class TariffsExecutor(
     override fun getCommand(): Command =
         Command.TARIFFS
 
-    override fun execute(user: UserEntity, options: Any?): Mono<ResponseMessageItem> =
-        Mono.deferContextual { context ->
-            logger.debugTraceId(context, "try to execute command '${getCommand().value}'")
+    override fun execute(request: RequestMessageItem, user: UserEntity?, options: Any?): Mono<ResponseMessageItem> =
+        Mono.defer {
+            logger.debug("Try to execute command '${getCommand().value}'")
 
-            getTariffVgroups(user)
+            getTariffVgroups(user!!)
                 .flatMap { vgroups ->
                     cachedSbssKnowledgeService.getTariffDatabase()
                         .map { sbssDatabase ->
@@ -47,7 +48,7 @@ class TariffsExecutor(
                 vgroups
                     .filter { it.agreementId == user.agreementId && it.tariffId != null }
                     .distinctBy { it.tariffId }
-                    .ifEmpty { throw RuntimeException("tariff vgroups is empty for agreementId '${user.agreementId}'") }
+                    .ifEmpty { throw GetVgroupsBadResponseException("tariff vgroups is empty for agreementId '${user.agreementId}'") }
             }
 
     private fun resolveTariffs(vgroups: List<GetVgroupsRet>, sbssDatabase: Map<Long, Tariff>): TariffDto =

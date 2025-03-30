@@ -8,11 +8,29 @@ data class TariffDto(
 )
 
 data class Tariff(
+    /**
+     * Идентификатор
+     */
     val id: Long? = null,
+    /**
+     * Тип (интернет, ТВ, комбо)
+     */
     val type: String? = null,
+    /**
+     * Название
+     */
     val name: String? = null,
+    /**
+     * Скорость соединения (для интернета)
+     */
     val speed: String? = null,
+    /**
+     * Количество каналов (для ТВ и комбо)
+     */
     val channels: String? = null,
+    /**
+     * Абонентская плата
+     */
     val rent: String? = null
 )
 

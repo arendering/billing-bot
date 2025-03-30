@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import su.vshk.billing.bot.web.dto.Fault
 import org.springframework.stereotype.Component
+import su.vshk.billing.bot.util.BillingBadResponseException
 
 @Component
 class ResponseConverter(
@@ -33,7 +34,7 @@ class ResponseConverter(
         val node = xmlMapper.readTree(body)
             .get(BODY_PAYLOAD_TAG)
             .get(payloadTag)
-            ?: throw RuntimeException("response node is null for payload tag '$payloadTag'")
+            ?: throw BillingBadResponseException("response node is null for payload tag '$payloadTag'")
 
         return if (isEmptyNode(node)) {
             EMPTY_JSON

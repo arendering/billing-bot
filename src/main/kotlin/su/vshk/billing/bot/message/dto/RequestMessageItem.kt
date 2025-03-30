@@ -1,5 +1,7 @@
 package su.vshk.billing.bot.message.dto
 
+import su.vshk.billing.bot.dao.model.Command
+
 data class RequestMessageItem(
     /**
      * Ввод текста.
@@ -20,6 +22,11 @@ data class RequestMessageItem(
      * Пользовательский ввод (набранный текст или данные с кнопки).
      */
     val input: String,
+
+    /**
+     * Объект команды, если пользователь ввел команду
+     */
+    val command: Command?,
 
     /**
      * Id сообщения, которое отправил пользователь или на котором нажал кнопку.

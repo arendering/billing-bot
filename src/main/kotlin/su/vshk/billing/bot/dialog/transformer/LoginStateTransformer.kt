@@ -10,6 +10,7 @@ import su.vshk.billing.bot.dialog.step.LoginStep
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.response.LoginMessageService
 import su.vshk.billing.bot.service.LoginMessageIdService
+import su.vshk.billing.bot.util.InternalException
 
 @Component
 class LoginStateTransformer(
@@ -26,7 +27,6 @@ class LoginStateTransformer(
                 DialogState(
                     command = getCommand(),
                     options = LoginOptions(),
-                    steps = listOf(LoginStep.LOGIN, LoginStep.PASSWORD),
                     response = DialogState.Response.next(loginMessageService.enterLogin())
                 )
             }
@@ -50,7 +50,7 @@ class LoginStateTransformer(
                     loginMessageIdService.add(telegramId = request.chatId, messageId = request.messageId)
                         .map { state.finish(options.copy(password = option)) }
 
-                else -> throw IllegalStateException("unknown step: '$step'")
+                else -> throw InternalException("unknown step: '$step' for command ${getCommand().value}")
             }
         }
 }

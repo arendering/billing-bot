@@ -14,6 +14,7 @@ import su.vshk.billing.bot.dialog.transformer.DialogStateTransformer
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.message.response.CommonMessageService
+import su.vshk.billing.bot.util.InternalException
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
@@ -55,7 +56,7 @@ class DialogProcessor(
      *
      * @param request запрос
      * @param user пользователь
-     * @param command комманда
+     * @param command актуальная команда
      * @return dto диалога
      */
     fun startDialog(request: RequestMessageItem, user: UserEntity, command: Command): Mono<UserStateDto> =
@@ -119,11 +120,11 @@ class DialogProcessor(
             }
 
             else ->
-                throw IllegalStateException("unexpected dialog state meta $meta")
+                throw InternalException("unexpected dialog state meta $meta")
         }
     }
 
     private fun findDialogTransformer(command: Command): DialogStateTransformer =
         dialogTransformers.find { it.getCommand() == command }
-            ?: throw RuntimeException("could not find dialog state transformer for command ${command.value}")
+            ?: throw InternalException("could not find dialog state transformer for command ${command.value}")
 }
