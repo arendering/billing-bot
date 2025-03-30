@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import su.vshk.billing.bot.dao.model.Command
 import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dialog.dto.StateDto
 import su.vshk.billing.bot.message.dto.RequestMessageItem
@@ -27,7 +28,14 @@ class BaseDialogTest {
     protected val telegramId = 42L
 
     protected fun createRequest(input: String, messageId: Int = 13) =
-        RequestMessageItem(isTextUpdate = false, isButtonUpdate = true, chatId = telegramId, input = input, messageId = messageId)
+        RequestMessageItem(
+            isTextUpdate = false,
+            isButtonUpdate = true,
+            chatId = telegramId,
+            input = input,
+            command = Command.get(input),
+            messageId = messageId
+        )
 
     protected fun createUser() =
         UserEntity(telegramId = telegramId, userId = 90, login = "user", agreementId = 80)

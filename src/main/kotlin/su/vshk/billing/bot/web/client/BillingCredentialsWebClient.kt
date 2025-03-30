@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import su.vshk.billing.bot.config.BotProperties
+import su.vshk.billing.bot.util.BillingBadResponseException
 
 @Service
 class BillingCredentialsWebClient(
@@ -46,7 +47,7 @@ class BillingCredentialsWebClient(
         responseClazz: Class<T>
     ): BillingResponseItem<T> {
         val httpBody = responseData.body
-            ?: throw RuntimeException("http body is null")
+            ?: throw BillingBadResponseException("http body is null")
 
         return if (responseData.status?.is2xxSuccessful == true) {
             BillingResponseItem(

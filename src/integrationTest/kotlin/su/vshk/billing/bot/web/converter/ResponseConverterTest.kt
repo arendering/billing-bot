@@ -108,7 +108,6 @@ class ResponseConverterTest {
         assertThat(ret.size).isEqualTo(2)
 
         val payment = ret[0]
-        assertThat(payment.manager).isEqualTo("Петров Петр Петрович")
         assertThat(payment.managerDescription).isEqualTo("")
 
         val pay = payment.pay

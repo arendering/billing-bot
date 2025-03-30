@@ -5,6 +5,9 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import su.vshk.billing.bot.config.BotProperties
+import su.vshk.billing.bot.util.BillingBadResponseException
+import su.vshk.billing.bot.util.ClientLoginBadResponseException
+import su.vshk.billing.bot.util.ManagerLoginBadResponseException
 import su.vshk.billing.bot.web.converter.RequestConverter
 import su.vshk.billing.bot.web.converter.ResponseConverter
 import su.vshk.billing.bot.web.dto.BillingBaseResponse
@@ -68,7 +71,7 @@ class BillingLoginWebClient(
                         Optional.empty()
 
                     fault != null ->
-                        throw RuntimeException("could not get client cookie: ${fault.faultString}")
+                        throw ClientLoginBadResponseException("could not get client cookie: ${fault.faultString}")
 
                     else ->
                         Optional.of(
@@ -92,7 +95,7 @@ class BillingLoginWebClient(
                 if (fault == null) {
                     Cookie(value = cookie, expTimestampSeconds = cookieExpTimestamp)
                 } else {
-                    throw RuntimeException("could not get manager cookie: ${fault.faultString}")
+                    throw ManagerLoginBadResponseException("could not get manager cookie: ${fault.faultString}")
                 }
             }
 
@@ -118,14 +121,13 @@ class BillingLoginWebClient(
     private fun resolveCookieExpTimestamp(from: Instant, cookie: ResponseCookie): Long =
         from.epochSecond + cookie.maxAge.seconds - EXP_DELTA_SECONDS
 
-    //TODO: подумай, куда вынести
     private fun <T> toResponseItem(
         method: String,
         responseData: BillingBaseResponse,
         responseClazz: Class<T>
     ): BillingResponseItem<T> {
         val httpBody = responseData.body
-            ?: throw RuntimeException("http body is null")
+            ?: throw BillingBadResponseException("http body is null")
 
         return if (responseData.status?.is2xxSuccessful == true) {
             BillingResponseItem(

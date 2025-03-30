@@ -17,6 +17,9 @@ import su.vshk.billing.bot.service.VgroupsService
 import su.vshk.billing.bot.service.dto.AgreementDto
 import su.vshk.billing.bot.service.dto.InfoDto
 import su.vshk.billing.bot.util.AddressNormalizer
+import su.vshk.billing.bot.util.GetVgroupsBadResponseException
+import su.vshk.billing.bot.util.InternalException
+import su.vshk.billing.bot.util.UnexpectedDialogOptionException
 import su.vshk.billing.bot.web.dto.manager.GetAccountRet
 import su.vshk.billing.bot.web.dto.manager.GetVgroupsRet
 import java.math.BigDecimal
@@ -78,7 +81,6 @@ class AgreementStateTransformer(
             DialogState(
                 command = getCommand(),
                 options = AgreementOptions(),
-                steps = listOf(AgreementStep.INFO, AgreementStep.SWITCH_AGREEMENT),
                 response = DialogState.Response.next(agreementMessageService.showInfo(info))
             )
         } else {
@@ -108,7 +110,7 @@ class AgreementStateTransformer(
         account: GetAccountRet
     ): InfoDto {
         val vgroup = vgroups.find { it.agreementId == agreementId }
-            ?: throw RuntimeException("vgroup not found by agreement id '$agreementId'")
+            ?: throw GetVgroupsBadResponseException("vgroup not found by agreementId '$agreementId'")
 
         return InfoDto(
             username = vgroup.username,
@@ -127,13 +129,13 @@ class AgreementStateTransformer(
         vgroups.map {
             AgreementDto(
                 agreementId = it.agreementId
-                    ?: throw RuntimeException("agreement id is null"),
+                    ?: throw GetVgroupsBadResponseException("agreementId is null"),
 
                 agreementNumber = it.agreementNumber
-                    ?: throw RuntimeException("agreement number is null"),
+                    ?: throw GetVgroupsBadResponseException("agreementNumber is null"),
 
                 address = it.addresses?.firstOrNull()?.address?.let { a -> AddressNormalizer.agreementNormalize(a) }
-                    ?: throw RuntimeException("address is null")
+                    ?: throw GetVgroupsBadResponseException("address is null")
             )
         }
 
@@ -146,7 +148,7 @@ class AgreementStateTransformer(
 
             AgreementAvailableOptions.SWITCH_AGREEMENT -> {
                 val agreements = agreementCache[user.telegramId]
-                    ?: throw RuntimeException("agreements not found in cache by telegram id '${user.telegramId}'")
+                    ?: throw InternalException("agreements not found in cache by telegram id '${user.telegramId}'")
 
                 state.incrementStep(
                     options = state.options,
@@ -154,7 +156,7 @@ class AgreementStateTransformer(
                 )
             }
 
-            else -> throw IllegalStateException("step '${AgreementStep.INFO}': unexpected option '$option'")
+            else -> throw UnexpectedDialogOptionException(option = option, command = getCommand().value, step = state.currentStep())
         }
 
     private fun processSwitchAgreementOption(user: UserEntity, state: DialogState, option: String): DialogState =
@@ -163,7 +165,7 @@ class AgreementStateTransformer(
             state.cancel(agreementMessageService.showMainMenu())
         } else {
             val chosenAgreement = agreementCache.remove(user.telegramId)?.find { it.agreementId == option.toLong() }
-                ?: throw RuntimeException("agreementId '$option' not found in cache for user telegramId '${user.telegramId}'")
+                ?: throw InternalException("agreementId '$option' not found in cache for user telegramId '${user.telegramId}'")
 
             state.finish(
                 (state.options as AgreementOptions).copy(agreement = chosenAgreement)

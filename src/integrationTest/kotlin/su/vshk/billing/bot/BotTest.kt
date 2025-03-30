@@ -68,7 +68,6 @@ class BotTest {
     @MockBean
     private lateinit var yookassaWebClient: YookassaWebClient
 
-    private val logger = getLogger()
     private val telegramId = 42L
     private val buttonRequestMessageId = 1
 
@@ -779,7 +778,6 @@ class BotTest {
         assertThat(editMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
         assertThat(editMessageMessageIdCaptor.firstValue).isEqualTo(buttonRequestMessageId)
         editMessageResponseContentCaptor.firstValue.text.let { text ->
-            logger.info("Response message: $text")
             assertThat(text).contains(
                 "Интернет:", "Тариф", "Свои", "Скорость", "1Gbit/s", "Стоимость", "100р/мес",
                 "Онлайн ТВ:", "Тариф", "24ТВ \"Лайт +\"", "Каналов", "241", "Стоимость", "199р/мес.", "(Архив) Смотрешка 25 за 25",
@@ -867,7 +865,7 @@ class BotTest {
         preSaveUser()
         preSavePaymentNotificationMessage(buttonRequestMessageId)
 
-        pushButton(GenericCommand.DELETE_PAYMENT_NOTIFICATION)
+        pushButton(Command.DELETE_PAYMENT_NOTIFICATION.value)
 
         assertThat(deleteMessageChatIdCaptor.firstValue).isEqualTo(telegramId)
         assertThat(deleteMessageIdsCaptor.firstValue).containsExactly(buttonRequestMessageId)
@@ -896,7 +894,7 @@ class BotTest {
         mockGetPaymentsEmpty()
 
         pushButton(Command.PAYMENT_HISTORY.value)
-        pushButton(GenericCommand.DELETE_PAYMENT_NOTIFICATION)
+        pushButton(Command.DELETE_PAYMENT_NOTIFICATION.value)
         pushButton(PaymentHistoryAvailableOptions.PERIOD_ONE_MONTH)
 
         assertThat(deleteMessageChatIdCaptor.firstValue).isEqualTo(telegramId)

@@ -14,6 +14,8 @@ import su.vshk.billing.bot.message.response.PromisePaymentMessageService
 import su.vshk.billing.bot.service.CalculatorService
 import su.vshk.billing.bot.service.RecommendedPaymentService
 import su.vshk.billing.bot.util.AmountUtils
+import su.vshk.billing.bot.util.InternalException
+import su.vshk.billing.bot.util.UnexpectedDialogOptionException
 
 @Component
 class PromisePaymentStateTransformer(
@@ -30,7 +32,6 @@ class PromisePaymentStateTransformer(
             DialogState(
                 command = getCommand(),
                 options = PromisePaymentOptions(),
-                steps = listOf(PromisePaymentStep.WARNING, PromisePaymentStep.AMOUNT),
                 response = DialogState.Response.next(promisePaymentMessageService.showWarning())
             )
         }
@@ -60,7 +61,7 @@ class PromisePaymentStateTransformer(
                     }
                 }
         } else {
-            throw RuntimeException("step '${state.currentStep()}': unexpected option '$option'")
+            throw UnexpectedDialogOptionException(option = option, command = getCommand().value, step = state.currentStep())
         }
 
     private fun processAmountOption(user: UserEntity, state: DialogState, option: String): DialogState {
@@ -72,7 +73,7 @@ class PromisePaymentStateTransformer(
                 val updatedOptions = (state.options as PromisePaymentOptions).copy(amount = dto.amount)
                 state.finish(updatedOptions)
             }
-            else -> throw RuntimeException("inconsistent calculator dto $dto")
+            else -> throw InternalException("inconsistent calculator dto $dto")
         }
     }
 

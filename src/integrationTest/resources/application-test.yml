@@ -33,3 +33,5 @@ logging:
     su.vshk.billing.bot.: debug
   file:
     name:
+  pattern:
+    level: "bot-trace-id [%X{bot-trace-id}] %5p"

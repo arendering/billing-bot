@@ -9,9 +9,10 @@ import su.vshk.billing.bot.dao.model.UserEntity
 import su.vshk.billing.bot.dao.service.PaymentNotificationDaoService
 import su.vshk.billing.bot.dialog.option.NotificationAvailableOptions
 import su.vshk.billing.bot.dialog.option.NotificationOptions
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.message.response.NotificationMessageService
-import su.vshk.billing.bot.util.debugTraceId
+import su.vshk.billing.bot.util.InternalException
 import su.vshk.billing.bot.util.getLogger
 
 @Service
@@ -25,16 +26,16 @@ class NotificationExecutor(
     override fun getCommand(): Command =
         Command.NOTIFICATION
 
-    override fun execute(user: UserEntity, options: Any?): Mono<ResponseMessageItem> =
-        Mono.deferContextual { context ->
+    override fun execute(request: RequestMessageItem, user: UserEntity?, options: Any?): Mono<ResponseMessageItem> =
+        Mono.defer {
             options as NotificationOptions
-            logger.debugTraceId(context, "try to execute command '${getCommand().value}' with options: $options")
+            logger.debug("Try to execute command '${getCommand().value}' with options: $options")
 
             when (val switch = options.switch) {
                 NotificationAvailableOptions.ENABLE_FOR_SINGLE_AGREEMENT ->
                     Mono
                         .defer {
-                            val entity = PaymentNotificationEntity(telegramId = user.telegramId, notificationType = PaymentNotificationType.SINGLE)
+                            val entity = PaymentNotificationEntity(telegramId = user!!.telegramId, notificationType = PaymentNotificationType.SINGLE)
                             paymentNotificationDaoService.save(entity)
                         }
                         .map { notificationMessageService.singleAgreementEnabled() }
@@ -42,7 +43,7 @@ class NotificationExecutor(
                 NotificationAvailableOptions.ENABLE_FOR_ALL_AGREEMENTS ->
                     Mono
                         .defer {
-                            val entity = PaymentNotificationEntity(telegramId = user.telegramId, notificationType = PaymentNotificationType.ALL)
+                            val entity = PaymentNotificationEntity(telegramId = user!!.telegramId, notificationType = PaymentNotificationType.ALL)
                             paymentNotificationDaoService.save(entity)
                         }
                         .map { notificationMessageService.allAgreementsEnabled() }
@@ -50,7 +51,7 @@ class NotificationExecutor(
                 NotificationAvailableOptions.ENABLE ->
                     Mono
                         .defer {
-                            val entity = PaymentNotificationEntity(telegramId = user.telegramId, notificationType = PaymentNotificationType.SINGLE)
+                            val entity = PaymentNotificationEntity(telegramId = user!!.telegramId, notificationType = PaymentNotificationType.SINGLE)
                             paymentNotificationDaoService.save(entity)
                         }
                         .map { notificationMessageService.enabled() }
@@ -58,10 +59,10 @@ class NotificationExecutor(
 
                 NotificationAvailableOptions.DISABLE ->
                     Mono
-                        .defer { paymentNotificationDaoService.removeByIdSafe(user.telegramId) }
+                        .defer { paymentNotificationDaoService.removeByIdSafe(user!!.telegramId) }
                         .map { notificationMessageService.disabled() }
 
-                else -> throw RuntimeException("unsupported switch option '$switch'")
+                else -> throw InternalException("unsupported switch option '$switch'")
             }
         }
 }

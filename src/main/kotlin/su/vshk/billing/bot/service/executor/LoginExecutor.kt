@@ -9,11 +9,10 @@ import su.vshk.billing.bot.dialog.option.LoginOptions
 import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.service.VgroupsService
 import su.vshk.billing.bot.dao.service.UserDaoService
+import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.message.response.LoginMessageService
 import su.vshk.billing.bot.service.LoginMessageIdService
-import su.vshk.billing.bot.util.debugTraceId
-import su.vshk.billing.bot.util.errorTraceId
-import su.vshk.billing.bot.util.getLogger
+import su.vshk.billing.bot.util.*
 import su.vshk.billing.bot.web.client.BillingWebClient
 import su.vshk.billing.bot.web.dto.client.ClientLoginRequest
 
@@ -26,19 +25,17 @@ class LoginExecutor(
     private val loginMessageService: LoginMessageService
 ): CommandExecutor {
 
-    companion object {
-        private val log = getLogger()
-    }
+    private val logger = getLogger()
 
     override fun getCommand(): Command =
         Command.LOGIN
 
-    override fun execute(user: UserEntity, options: Any?): Mono<ResponseMessageItem> =
-        Mono.deferContextual { context ->
+    override fun execute(request: RequestMessageItem, user: UserEntity?, options: Any?): Mono<ResponseMessageItem> =
+        Mono.defer {
             options as LoginOptions
-            log.debugTraceId(context = context, msg = "try to execute command '${getCommand().value}' with options: $options")
+            logger.debug("Try to execute command '${getCommand().value}' with options: $options")
 
-            loginMessageIdService.remove(user.telegramId)
+            loginMessageIdService.remove(user!!.telegramId)
                 .flatMap { loginMessageIds ->
                     Mono
                         .defer {
@@ -60,11 +57,9 @@ class LoginExecutor(
                                         ?: loginMessageService.showInvalidCredentials(loginMessageIds).toMono()
                                 }
                         }
-                        .onErrorResume {
-                            Mono.deferContextual { context ->
-                                log.errorTraceId(context, it.stackTraceToString())
-                                loginMessageService.showUnexpectedError(loginMessageIds).toMono()
-                            }
+                        .onErrorResume { th ->
+                            logger.error(th.stackTraceToString())
+                            loginMessageService.showUnexpectedError(loginMessageIds).toMono()
                         }
                 }
     }
@@ -73,6 +68,6 @@ class LoginExecutor(
         vgroupsService.getInternetVgroups(userId)
             .map { vgroups ->
                 vgroups.first().agreementId
-                    ?: throw RuntimeException("first agreement id is null")
+                    ?: throw GetVgroupsBadResponseException("agreementId is null")
             }
 }

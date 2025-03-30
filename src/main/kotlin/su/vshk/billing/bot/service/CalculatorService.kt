@@ -7,6 +7,7 @@ import su.vshk.billing.bot.message.dto.ResponseMessageItem
 import su.vshk.billing.bot.message.response.CalculatorMessageService
 import su.vshk.billing.bot.service.dto.CalculatorResponseDto
 import su.vshk.billing.bot.service.dto.CalculatorStateDto
+import su.vshk.billing.bot.util.CalculatorException
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
@@ -28,9 +29,9 @@ class CalculatorService(
      */
     fun getMaxLimit(command: Command): Int =
         when (supportedCommands.find { it == command }) {
-            Command.PROMISE_PAYMENT -> 1_500
+            Command.PROMISE_PAYMENT -> 2_000
             Command.YOOKASSA_PAYMENT -> 100_000
-            else -> throw RuntimeException("could not resolve max limit for command ${command.value}")
+            else -> throw CalculatorException("could not resolve max limit for command ${command.value}")
         }
 
     /**
@@ -38,7 +39,7 @@ class CalculatorService(
      */
     fun initialize(telegramId: Long, amount: Int, command: Command): ResponseMessageItem {
         if (command !in supportedCommands) {
-            throw RuntimeException("unsupported calculator command ${command.value}")
+            throw CalculatorException("unsupported calculator command ${command.value}")
         }
 
         amountCache[telegramId] = CalculatorStateDto(amount = amount, command = command)
@@ -51,7 +52,7 @@ class CalculatorService(
     fun processOption(telegramId: Long, option: String): CalculatorResponseDto =
         try {
             amountCache[telegramId]
-                ?: throw RuntimeException("unable to get amount from calculator cache for user '$telegramId'")
+                ?: throw CalculatorException("unable to get amount from calculator cache for user '$telegramId'")
 
             when (option) {
                 CalculatorButton.CANCEL_AMOUNT_STEP -> cancelAmountStep(telegramId)
@@ -59,7 +60,7 @@ class CalculatorService(
                 CalculatorButton.ERASE -> eraseLastDigit(telegramId)
                 CalculatorButton.CLEAR -> clearAmount(telegramId)
                 in CalculatorButton.DIGITS -> increaseAmount(telegramId, option)
-                else -> throw RuntimeException("calculator unexpected option '$option' for user '$telegramId'")
+                else -> throw CalculatorException("unexpected option '$option' for user '$telegramId'")
             }
         } catch (th: Throwable) {
             amountCache.remove(telegramId)

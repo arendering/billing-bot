@@ -105,7 +105,7 @@ class PromisePaymentDialogTest: BaseDialogTest() {
 
         assertDialogContainsUser()
 
-        mockRecommendedPayment(BigDecimal("2000"))
+        mockRecommendedPayment(BigDecimal("5000"))
         dialogProcessor
             .processOption(request = createRequest(input = PromisePaymentAvailableOptions.WARNING_APPROVE))
             .test()

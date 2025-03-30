@@ -4,6 +4,7 @@ import su.vshk.billing.bot.web.client.BillingWebClient
 import su.vshk.billing.bot.web.dto.manager.GetRecommendedPaymentRequest
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
+import su.vshk.billing.bot.util.GetRecommendedPaymentBadResponseException
 import java.math.BigDecimal
 
 @Service
@@ -38,6 +39,6 @@ class RecommendedPaymentService(
                 )
             )
             .map {
-                it.amount ?: throw RuntimeException("getRecommendedPayment payload is null")
+                it.amount ?: throw GetRecommendedPaymentBadResponseException("payload is null")
             }
 }

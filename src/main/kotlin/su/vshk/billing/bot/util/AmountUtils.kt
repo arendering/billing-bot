@@ -26,7 +26,6 @@ class AmountUtils private constructor() {
             splitByThousands: Boolean = true,
             currencyChar: Char? = '₽'
         ): String =
-            //TODO: тут не нужно округлять, все BigDecimal в коде уже округлены
             amount.setScale(2, RoundingMode.UP)
                 .let { rounded ->
                     if (splitByThousands) {

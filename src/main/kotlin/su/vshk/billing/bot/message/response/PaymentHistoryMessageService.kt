@@ -87,7 +87,7 @@ class PaymentHistoryMessageService(
                         .addEntry(
                             key = getText("payment.history.final.manager.key"),
                             keyType = TextType.PLAIN,
-                            value = payment.manager
+                            value = resolveManagerValue(payment.manager)
                         )
                     if (payments.lastIndex != i) {
                         this.addLineBreak()
@@ -95,5 +95,12 @@ class PaymentHistoryMessageService(
                 }
 
             this
+        }
+
+    private fun resolveManagerValue(manager: String?): String =
+        if (manager.isNullOrBlank()) {
+            getText("payment.history.final.manager.default.value")
+        } else {
+            manager
         }
 }

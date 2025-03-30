@@ -5,6 +5,7 @@ import reactor.core.publisher.Mono
 import su.vshk.billing.bot.message.dto.RequestMessageItem
 import su.vshk.billing.bot.service.dto.LoginInputDto
 import su.vshk.billing.bot.service.dto.LoginMessageDto
+import su.vshk.billing.bot.util.InternalException
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -29,7 +30,7 @@ class LoginMessageIdService {
         Mono.fromCallable {
             val updatedDto = messages[telegramId]
                 ?.addMessageId(messageId)
-                ?: throw RuntimeException("could not found message ids for user '$telegramId'")
+                ?: throw InternalException("could not found message ids for user '$telegramId'")
 
             messages[telegramId] = updatedDto
             messageId
@@ -37,7 +38,7 @@ class LoginMessageIdService {
 
     fun remove(telegramId: Long): Mono<LoginMessageDto> =
         Mono.fromCallable {
-            val dto = messages.remove(telegramId) ?: throw RuntimeException("could not found message ids for user '$telegramId'")
+            val dto = messages.remove(telegramId) ?: throw InternalException("could not found message ids for user '$telegramId'")
             val messageIds = dto.messageIds
 
             when {
@@ -53,7 +54,7 @@ class LoginMessageIdService {
                         deleteMessageIds = messageIds.asReversed().dropLast(1)
                     )
 
-                else -> throw IllegalStateException("unreachable code")
+                else -> throw InternalException("inconsistent dto $dto")
             }
         }
 

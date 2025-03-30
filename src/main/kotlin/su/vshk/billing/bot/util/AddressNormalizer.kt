@@ -31,7 +31,7 @@ class AddressNormalizer private constructor() {
                 .dropLast(1)
                 .joinToString(separator = COMMA + WHITESPACE)
                 .ifEmpty {
-                    logger.warn("unable to normalize address '$address'")
+                    logger.warn("Unable to normalize address '$address'")
                     address
                 }
 
